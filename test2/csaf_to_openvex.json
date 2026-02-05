@@ -1,0 +1,160 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-c34a2eb0-394f-4126-8641-26580e61202e",
+  "author": "Acme Corporation Product Security",
+  "timestamp": "2026-01-27T12:00:00Z",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2021-44228",
+        "description": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints."
+      },
+      "timestamp": "2026-01-27T12:00:00Z",
+      "products": [
+        {
+          "@id": "CSAFPID-ALPHA-123",
+          "hashes": {
+            "sha-256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        }
+      ],
+      "status": "not_affected",
+      "justification": "component_not_present",
+      "status_notes": "CVSS: CRITICAL (10.0) | CWEs: CWE-502, CWE-917 | References: 2 available"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2021-45046",
+        "description": "It was found that the fix to address CVE-2021-44228 in Apache Log4j 2.15.0 was incomplete in certain non-default configurations."
+      },
+      "timestamp": "2026-01-27T12:00:00Z",
+      "products": [
+        {
+          "@id": "CSAFPID-BETA-200"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "status_notes": "CVSS: CRITICAL (9.0) | CWEs: CWE-400 | NVD Entry: https://nvd.nist.gov/vuln/detail/CVE-2021-45046"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2021-45105",
+        "description": "Apache Log4j2 versions 2.0-alpha1 through 2.16.0 did not protect from uncontrolled recursion from self-referential lookups."
+      },
+      "timestamp": "2026-01-27T12:00:00Z",
+      "products": [
+        {
+          "@id": "CSAFPID-GAMMA-351"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "status_notes": "CVSS: MEDIUM (5.9) | CWEs: CWE-674 | NVD Entry: https://nvd.nist.gov/vuln/detail/CVE-2021-45105"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2021-44832",
+        "description": "Apache Log4j2 versions 2.0-beta7 through 2.17.0 are vulnerable to a remote code execution (RCE) attack where an attacker with permission to modify the logging configuration file can construct a malicious configuration using a JDBC Appender."
+      },
+      "timestamp": "2026-01-27T12:00:00Z",
+      "products": [
+        {
+          "@id": "CSAFPID-DELTA-400"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "status_notes": "CVSS: MEDIUM (6.6) | CWEs: CWE-94 | NVD Entry: https://nvd.nist.gov/vuln/detail/CVE-2021-44832"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2023-12345",
+        "description": "A hypothetical vulnerability demonstrating inline mitigations."
+      },
+      "timestamp": "2026-01-27T12:00:00Z",
+      "products": [
+        {
+          "@id": "CSAFPID-EPSILON-520"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "status_notes": "CVSS: HIGH (7.5) | CWEs: CWE-79 | NVD Entry: https://nvd.nist.gov/vuln/detail/CVE-2023-12345"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-00001",
+        "description": "A critical remote code execution vulnerability affecting Product Zeta versions prior to 1.0.1."
+      },
+      "timestamp": "2026-01-27T12:00:00Z",
+      "products": [
+        {
+          "@id": "CSAFPID-ZETA-100"
+        }
+      ],
+      "status": "affected",
+      "action_statement": "vendor_fix: Upgrade to Product Zeta 1.0.1 or later\nworkaround: Disable remote access feature until patch is applied\nvendor_fix: Upgrade to Product Zeta 1.0.1 or later\nworkaround: Disable remote access feature until patch is applied",
+      "status_notes": "CVSS: CRITICAL (10.0) | CWEs: CWE-78 | References: 2 available"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-00001",
+        "description": "A critical remote code execution vulnerability affecting Product Zeta versions prior to 1.0.1."
+      },
+      "timestamp": "2026-01-27T12:00:00Z",
+      "products": [
+        {
+          "@id": "CSAFPID-ZETA-101"
+        }
+      ],
+      "status": "fixed",
+      "status_notes": "CVSS: CRITICAL (10.0) | CWEs: CWE-78 | References: 2 available"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-00002",
+        "description": "An information disclosure vulnerability in Product Eta versions 2.0.0 through 2.2.9."
+      },
+      "timestamp": "2026-01-27T12:00:00Z",
+      "products": [
+        {
+          "@id": "CSAFPID-ETA-2X-OLD"
+        }
+      ],
+      "status": "affected",
+      "action_statement": "vendor_fix: Upgrade to Product Eta 2.3.0 or later\nvendor_fix: Upgrade to Product Eta 2.3.0 or later",
+      "status_notes": "CVSS: MEDIUM (6.5) | CWEs: CWE-200 | NVD Entry: https://nvd.nist.gov/vuln/detail/CVE-2024-00002"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-00002",
+        "description": "An information disclosure vulnerability in Product Eta versions 2.0.0 through 2.2.9."
+      },
+      "timestamp": "2026-01-27T12:00:00Z",
+      "products": [
+        {
+          "@id": "CSAFPID-ETA-230"
+        }
+      ],
+      "status": "fixed",
+      "status_notes": "CVSS: MEDIUM (6.5) | CWEs: CWE-200 | NVD Entry: https://nvd.nist.gov/vuln/detail/CVE-2024-00002"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-00003",
+        "description": "A potential information disclosure vulnerability in Product Theta."
+      },
+      "timestamp": "2026-01-27T12:00:00Z",
+      "products": [
+        {
+          "@id": "CSAFPID-THETA-600"
+        }
+      ],
+      "status": "under_investigation",
+      "impact_statement": "Investigation in progress to determine impact",
+      "status_notes": "CVSS: MEDIUM (4.3) | CWEs: CWE-209 | NVD Entry: https://nvd.nist.gov/vuln/detail/CVE-2024-00003"
+    }
+  ]
+}

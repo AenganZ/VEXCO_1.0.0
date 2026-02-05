@@ -1,0 +1,11 @@
+abc
+examples/*
+restore/*
+test/*
+.env
+NVD_API_key
+
+validator/examples/*
+validator/__pycache__
+validator/config_template.py
+

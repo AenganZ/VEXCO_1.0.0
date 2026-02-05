@@ -1,0 +1,513 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:8f123456-7890-4abc-def0-123456789abc",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-01-27T12:00:00Z",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "VEXCO",
+          "version": "1.0",
+          "supplier": {
+            "name": "Acme Security",
+            "url": [
+              "https://acme-security.com"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "com.acme product-alpha",
+      "bom-ref": "pkg:maven/com.acme/product-alpha@1.2.3",
+      "version": "1.2.3",
+      "purl": "pkg:maven/com.acme/product-alpha@1.2.3"
+    },
+    {
+      "type": "library",
+      "name": "com.acme product-beta",
+      "bom-ref": "pkg:maven/com.acme/product-beta@2.0.0",
+      "version": "2.0.0",
+      "purl": "pkg:maven/com.acme/product-beta@2.0.0"
+    },
+    {
+      "type": "library",
+      "name": "com.acme product-delta",
+      "bom-ref": "pkg:maven/com.acme/product-delta@4.0.0",
+      "version": "4.0.0",
+      "purl": "pkg:maven/com.acme/product-delta@4.0.0"
+    },
+    {
+      "type": "library",
+      "name": "com.acme product-epsilon",
+      "bom-ref": "pkg:maven/com.acme/product-epsilon@5.2.0",
+      "version": "5.2.0",
+      "purl": "pkg:maven/com.acme/product-epsilon@5.2.0"
+    },
+    {
+      "type": "library",
+      "name": "com.acme product-eta",
+      "bom-ref": "pkg:maven/com.acme/product-eta@2.3.0",
+      "version": "2.3.0",
+      "purl": "pkg:maven/com.acme/product-eta@2.3.0"
+    },
+    {
+      "type": "library",
+      "name": "com.acme product-gamma",
+      "bom-ref": "pkg:maven/com.acme/product-gamma@3.5.1",
+      "version": "3.5.1",
+      "purl": "pkg:maven/com.acme/product-gamma@3.5.1"
+    },
+    {
+      "type": "library",
+      "name": "com.acme product-iota",
+      "bom-ref": "pkg:maven/com.acme/product-iota@7.1.0",
+      "version": "7.1.0",
+      "purl": "pkg:maven/com.acme/product-iota@7.1.0"
+    },
+    {
+      "type": "library",
+      "name": "com.acme product-theta",
+      "bom-ref": "pkg:maven/com.acme/product-theta@6.0.0",
+      "version": "6.0.0",
+      "purl": "pkg:maven/com.acme/product-theta@6.0.0"
+    },
+    {
+      "type": "library",
+      "name": "com.acme product-zeta",
+      "bom-ref": "pkg:maven/com.acme/product-zeta@1.0.0",
+      "version": "1.0.0",
+      "purl": "pkg:maven/com.acme/product-zeta@1.0.0"
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "id": "CVE-2021-44228",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-44228"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "NVD",
+            "url": "https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H&version=3.1"
+          },
+          "score": 10.0,
+          "severity": "critical",
+          "method": "CVSSv31",
+          "vector": "AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
+        }
+      ],
+      "analysis": {
+        "state": "not_affected",
+        "justification": "code_not_present",
+        "detail": "[original_justification:\"component_not_present\"] Justification: Component Not Present. Original Justification: Code Not Present. Product Alpha does not include log4j-core library. It uses logback as the logging framework."
+      },
+      "affects": [
+        {
+          "ref": "pkg:maven/com.acme/product-alpha",
+          "versions": [
+            {
+              "version": "1.2.3",
+              "status": "unaffected"
+            }
+          ]
+        }
+      ],
+      "description": "Apache Log4j2 JNDI features do not protect against attacker controlled LDAP and other JNDI related endpoints.",
+      "cwes": [
+        502
+      ],
+      "references": [
+        {
+          "id": "CVE-2021-44228",
+          "source": {
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-44228",
+            "name": "NVD"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CVE-2021-44832",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-44832"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "NVD",
+            "url": "https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:H/PR:H/UI:N/S:U/C:H/I:H/A:H&version=3.1"
+          },
+          "score": 6.6,
+          "severity": "medium",
+          "method": "CVSSv31",
+          "vector": "AV:N/AC:H/PR:H/UI:N/S:U/C:H/I:H/A:H"
+        }
+      ],
+      "analysis": {
+        "state": "not_affected",
+        "justification": "requires_configuration",
+        "detail": "[original_justification:\"vulnerable_code_cannot_be_controlled_by_adversary\"] Justification: Vulnerable Code Cannot Be Controlled By Adversary. Original Justification: Requires Configuration"
+      },
+      "affects": [
+        {
+          "ref": "pkg:maven/com.acme/product-delta",
+          "versions": [
+            {
+              "version": "4.0.0",
+              "status": "unaffected"
+            }
+          ]
+        }
+      ],
+      "cwes": [
+        20,
+        74
+      ],
+      "references": [
+        {
+          "id": "CVE-2021-44832",
+          "source": {
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-44832",
+            "name": "NVD"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CVE-2021-45046",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-45046"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "NVD",
+            "url": "https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:H&version=3.1"
+          },
+          "score": 9.0,
+          "severity": "critical",
+          "method": "CVSSv31",
+          "vector": "AV:N/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:H"
+        }
+      ],
+      "analysis": {
+        "state": "not_affected",
+        "justification": "code_not_present",
+        "detail": "[original_justification:\"component_not_present\"] Justification: Component Not Present. Original Justification: Code Not Present"
+      },
+      "affects": [
+        {
+          "ref": "pkg:maven/com.acme/product-beta",
+          "versions": [
+            {
+              "version": "2.0.0",
+              "status": "unaffected"
+            }
+          ]
+        }
+      ],
+      "cwes": [
+        917
+      ],
+      "references": [
+        {
+          "id": "CVE-2021-45046",
+          "source": {
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-45046",
+            "name": "NVD"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CVE-2021-45105",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-45105"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "NVD",
+            "url": "https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H&version=3.1"
+          },
+          "score": 5.9,
+          "severity": "medium",
+          "method": "CVSSv31",
+          "vector": "AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H"
+        }
+      ],
+      "analysis": {
+        "state": "not_affected",
+        "justification": "code_not_reachable",
+        "detail": "Justification: Vulnerable Code Not In Execute Path. Original Justification: Code Not Reachable"
+      },
+      "affects": [
+        {
+          "ref": "pkg:maven/com.acme/product-gamma",
+          "versions": [
+            {
+              "version": "3.5.1",
+              "status": "unaffected"
+            }
+          ]
+        }
+      ],
+      "cwes": [
+        20,
+        674
+      ],
+      "references": [
+        {
+          "id": "CVE-2021-45105",
+          "source": {
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-45105",
+            "name": "NVD"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CVE-2023-12345",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-12345"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "NVD",
+            "url": "https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N&version=3.1"
+          },
+          "score": 7.5,
+          "severity": "high",
+          "method": "CVSSv31",
+          "vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+        }
+      ],
+      "analysis": {
+        "state": "not_affected",
+        "justification": "protected_by_mitigating_control",
+        "detail": "Justification: Inline Mitigations Already Exist. Original Justification: Protected By Mitigating Control"
+      },
+      "affects": [
+        {
+          "ref": "pkg:maven/com.acme/product-epsilon",
+          "versions": [
+            {
+              "version": "5.2.0",
+              "status": "unaffected"
+            }
+          ]
+        }
+      ],
+      "references": [
+        {
+          "id": "CVE-2023-12345",
+          "source": {
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-12345",
+            "name": "NVD"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CVE-2024-00001",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-00001"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "NVD",
+            "url": "https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H&version=3.1"
+          },
+          "score": 10.0,
+          "severity": "critical",
+          "method": "CVSSv31",
+          "vector": "AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
+        }
+      ],
+      "analysis": {
+        "state": "resolved",
+        "detail": "vendor_fix: Update to a different revision or release and There is a workaround available",
+        "response": [
+          "update"
+        ]
+      },
+      "affects": [
+        {
+          "ref": "pkg:maven/com.acme/product-zeta",
+          "versions": [
+            {
+              "version": "1.0.0",
+              "status": "unaffected"
+            }
+          ]
+        }
+      ],
+      "references": [
+        {
+          "id": "CVE-2024-00001",
+          "source": {
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-00001",
+            "name": "NVD"
+          }
+        }
+      ],
+      "recommendation": "vendor_fix: Update to a different revision or release and There is a workaround available"
+    },
+    {
+      "id": "CVE-2024-00002",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-00002"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "NVD",
+            "url": "https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N&version=3.1"
+          },
+          "score": 6.5,
+          "severity": "medium",
+          "method": "CVSSv31",
+          "vector": "AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N"
+        }
+      ],
+      "analysis": {
+        "state": "resolved",
+        "detail": "vendor_fix: Fixed in version 2.3.0. Previous versions (2.0.0 - 2.2.9) were affected. Users should upgrade immediately.",
+        "response": [
+          "update"
+        ]
+      },
+      "affects": [
+        {
+          "ref": "pkg:maven/com.acme/product-eta",
+          "versions": [
+            {
+              "version": "2.3.0",
+              "status": "unaffected"
+            }
+          ]
+        }
+      ],
+      "references": [
+        {
+          "id": "CVE-2024-00002",
+          "source": {
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-00002",
+            "name": "NVD"
+          }
+        }
+      ],
+      "recommendation": "vendor_fix: Fixed in version 2.3.0. Previous versions (2.0.0 - 2.2.9) were affected. Users should upgrade immediately."
+    },
+    {
+      "id": "CVE-2024-00003",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-00003"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "NVD",
+            "url": "https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N&version=3.1"
+          },
+          "score": 4.3,
+          "severity": "medium",
+          "method": "CVSSv31",
+          "vector": "AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage"
+      },
+      "affects": [
+        {
+          "ref": "pkg:maven/com.acme/product-theta",
+          "versions": [
+            {
+              "version": "6.0.0",
+              "status": "unknown"
+            }
+          ]
+        }
+      ],
+      "references": [
+        {
+          "id": "CVE-2024-00003",
+          "source": {
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-00003",
+            "name": "NVD"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CVE-2024-00004",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-00004"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "NVD",
+            "url": "https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:N/A:N&version=3.1"
+          },
+          "score": 3.1,
+          "severity": "low",
+          "method": "CVSSv31",
+          "vector": "AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:N/A:N"
+        }
+      ],
+      "analysis": {
+        "state": "not_affected",
+        "justification": "code_not_present",
+        "detail": "[original_justification:\"component_not_present\"]"
+      },
+      "affects": [
+        {
+          "ref": "pkg:maven/com.acme/product-iota",
+          "versions": [
+            {
+              "version": "7.1.0",
+              "status": "unaffected"
+            }
+          ]
+        }
+      ],
+      "references": [
+        {
+          "id": "CVE-2024-00004",
+          "source": {
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-00004",
+            "name": "NVD"
+          }
+        }
+      ]
+    }
+  ],
+  "externalReferences": [
+    {
+      "type": "website",
+      "url": "https://nvd.nist.gov/",
+      "comment": "National Vulnerability Database"
+    }
+  ]
+}

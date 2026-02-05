@@ -1,0 +1,544 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:7fb274bd-7224-479a-bf5e-4cba4cb767c3",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-01-27T12:00:00Z",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "VEXCO",
+          "version": "1.0",
+          "supplier": {
+            "name": "Acme Corporation Product Security",
+            "url": [
+              "https://psirt.acme.com"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "Acme Product Alpha",
+      "bom-ref": "CSAFPID-ALPHA-123",
+      "version": "1.2.3",
+      "purl": "pkg:maven/com.acme/product-alpha@1.2.3",
+      "cpe": "cpe:2.3:a:acme:product_alpha:1.2.3:*:*:*:*:*:*:*",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "Acme Product Beta",
+      "bom-ref": "CSAFPID-BETA-200",
+      "version": "2.0.0",
+      "purl": "pkg:maven/com.acme/product-beta@2.0.0"
+    },
+    {
+      "type": "library",
+      "name": "Acme Product Gamma",
+      "bom-ref": "CSAFPID-GAMMA-351",
+      "version": "3.5.1",
+      "purl": "pkg:maven/com.acme/product-gamma@3.5.1"
+    },
+    {
+      "type": "library",
+      "name": "Acme Product Delta",
+      "bom-ref": "CSAFPID-DELTA-400",
+      "version": "4.0.0",
+      "purl": "pkg:maven/com.acme/product-delta@4.0.0"
+    },
+    {
+      "type": "library",
+      "name": "Acme Product Epsilon",
+      "bom-ref": "CSAFPID-EPSILON-520",
+      "version": "5.2.0",
+      "purl": "pkg:maven/com.acme/product-epsilon@5.2.0"
+    },
+    {
+      "type": "library",
+      "name": "Acme Product Zeta",
+      "bom-ref": "CSAFPID-ZETA-100",
+      "version": "1.0.0",
+      "purl": "pkg:maven/com.acme/product-zeta@1.0.0"
+    },
+    {
+      "type": "library",
+      "name": "Acme Product Zeta",
+      "bom-ref": "CSAFPID-ZETA-101",
+      "version": "1.0.1",
+      "purl": "pkg:maven/com.acme/product-zeta@1.0.1"
+    },
+    {
+      "type": "library",
+      "name": "Acme Product Eta 2.0.0 - 2.2.9",
+      "bom-ref": "CSAFPID-ETA-2X-OLD",
+      "purl": "pkg:maven/com.acme/product-eta"
+    },
+    {
+      "type": "library",
+      "name": "Acme Product Eta",
+      "bom-ref": "CSAFPID-ETA-230",
+      "version": "2.3.0",
+      "purl": "pkg:maven/com.acme/product-eta@2.3.0"
+    },
+    {
+      "type": "library",
+      "name": "Acme Product Theta",
+      "bom-ref": "CSAFPID-THETA-600",
+      "version": "6.0.0",
+      "purl": "pkg:maven/com.acme/product-theta@6.0.0"
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "id": "CVE-2021-44228",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-44228"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "NVD",
+            "url": "https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H&version=3.1"
+          },
+          "score": 10.0,
+          "severity": "critical",
+          "method": "CVSSv31",
+          "vector": "AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
+        }
+      ],
+      "analysis": {
+        "state": "not_affected",
+        "justification": "code_not_present",
+        "detail": "[original_justification:\"component_not_present\"] | Product Alpha does not include log4j-core library. It uses logback as the logging framework."
+      },
+      "affects": [
+        {
+          "ref": "CSAFPID-ALPHA-123",
+          "versions": [
+            {
+              "version": "1.2.3",
+              "status": "unaffected"
+            }
+          ]
+        }
+      ],
+      "description": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints.",
+      "cwes": [
+        502,
+        917
+      ],
+      "references": [
+        {
+          "id": "CVE-2021-44228",
+          "source": {
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-44228",
+            "name": "NVD Entry"
+          }
+        },
+        {
+          "id": "https://logging.apache.org/log4j/2.x/security.html",
+          "source": {
+            "url": "https://logging.apache.org/log4j/2.x/security.html",
+            "name": "Apache Log4j Security Page"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CVE-2021-44832",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-44832"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "NVD",
+            "url": "https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:H/PR:H/UI:N/S:U/C:H/I:H/A:H&version=3.1"
+          },
+          "score": 6.6,
+          "severity": "medium",
+          "method": "CVSSv31",
+          "vector": "AV:N/AC:H/PR:H/UI:N/S:U/C:H/I:H/A:H"
+        }
+      ],
+      "analysis": {
+        "state": "not_affected",
+        "justification": "requires_configuration",
+        "detail": "[original_justification:\"vulnerable_code_cannot_be_controlled_by_adversary\"] | In Product Delta, the vulnerable configuration parameters are hardcoded and cannot be influenced by external input or adversary control."
+      },
+      "affects": [
+        {
+          "ref": "CSAFPID-DELTA-400",
+          "versions": [
+            {
+              "version": "4.0.0",
+              "status": "unaffected"
+            }
+          ]
+        }
+      ],
+      "description": "Apache Log4j2 versions 2.0-beta7 through 2.17.0 are vulnerable to a remote code execution (RCE) attack where an attacker with permission to modify the logging configuration file can construct a malicious configuration using a JDBC Appender.",
+      "cwes": [
+        94
+      ],
+      "references": [
+        {
+          "id": "CVE-2021-44832",
+          "source": {
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-44832",
+            "name": "NVD Entry"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CVE-2021-45046",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-45046"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "NVD",
+            "url": "https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:H&version=3.1"
+          },
+          "score": 9.0,
+          "severity": "critical",
+          "method": "CVSSv31",
+          "vector": "AV:N/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:H"
+        }
+      ],
+      "analysis": {
+        "state": "not_affected",
+        "justification": "code_not_present",
+        "detail": "[original_justification:\"vulnerable_code_not_present\"] | Product Beta uses a custom-patched version of log4j that removes the vulnerable JNDI lookup functionality."
+      },
+      "affects": [
+        {
+          "ref": "CSAFPID-BETA-200",
+          "versions": [
+            {
+              "version": "2.0.0",
+              "status": "unaffected"
+            }
+          ]
+        }
+      ],
+      "description": "It was found that the fix to address CVE-2021-44228 in Apache Log4j 2.15.0 was incomplete in certain non-default configurations.",
+      "cwes": [
+        400
+      ],
+      "references": [
+        {
+          "id": "CVE-2021-45046",
+          "source": {
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-45046",
+            "name": "NVD Entry"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CVE-2021-45105",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-45105"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "NVD",
+            "url": "https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H&version=3.1"
+          },
+          "score": 5.9,
+          "severity": "medium",
+          "method": "CVSSv31",
+          "vector": "AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H"
+        }
+      ],
+      "analysis": {
+        "state": "not_affected",
+        "justification": "code_not_reachable",
+        "detail": "While log4j-core is present in Product Gamma, the vulnerable code path is never executed due to application architecture that disables JNDI lookups at startup."
+      },
+      "affects": [
+        {
+          "ref": "CSAFPID-GAMMA-351",
+          "versions": [
+            {
+              "version": "3.5.1",
+              "status": "unaffected"
+            }
+          ]
+        }
+      ],
+      "description": "Apache Log4j2 versions 2.0-alpha1 through 2.16.0 did not protect from uncontrolled recursion from self-referential lookups.",
+      "cwes": [
+        674
+      ],
+      "references": [
+        {
+          "id": "CVE-2021-45105",
+          "source": {
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-45105",
+            "name": "NVD Entry"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CVE-2023-12345",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-12345"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "NVD",
+            "url": "https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N&version=3.1"
+          },
+          "score": 7.5,
+          "severity": "high",
+          "method": "CVSSv31",
+          "vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+        }
+      ],
+      "analysis": {
+        "state": "not_affected",
+        "justification": "protected_by_mitigating_control",
+        "detail": "Product Epsilon has built-in input validation and sanitization that prevents exploitation of this vulnerability. Additionally, the application runs with restricted permissions."
+      },
+      "affects": [
+        {
+          "ref": "CSAFPID-EPSILON-520",
+          "versions": [
+            {
+              "version": "5.2.0",
+              "status": "unaffected"
+            }
+          ]
+        }
+      ],
+      "description": "A hypothetical vulnerability demonstrating inline mitigations.",
+      "cwes": [
+        79
+      ],
+      "references": [
+        {
+          "id": "CVE-2023-12345",
+          "source": {
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-12345",
+            "name": "NVD Entry"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CVE-2024-00001",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-00001"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "NVD",
+            "url": "https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H&version=3.1"
+          },
+          "score": 10.0,
+          "severity": "critical",
+          "method": "CVSSv31",
+          "vector": "AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
+        }
+      ],
+      "analysis": {
+        "state": "resolved",
+        "detail": "vendor_fix: Upgrade to Product Zeta 1.0.1 or later | workaround: Disable remote access feature until patch is applied | Disable remote access feature until patch is applied",
+        "response": [
+          "update",
+          "workaround_available"
+        ]
+      },
+      "affects": [
+        {
+          "ref": "CSAFPID-ZETA-100",
+          "versions": [
+            {
+              "version": "1.0.0",
+              "status": "affected"
+            }
+          ]
+        },
+        {
+          "ref": "CSAFPID-ZETA-101",
+          "versions": [
+            {
+              "version": "1.0.1",
+              "status": "unaffected"
+            }
+          ]
+        }
+      ],
+      "description": "A critical remote code execution vulnerability affecting Product Zeta versions prior to 1.0.1.",
+      "cwes": [
+        78
+      ],
+      "references": [
+        {
+          "id": "CVE-2024-00001",
+          "source": {
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-00001",
+            "name": "NVD Entry"
+          }
+        },
+        {
+          "id": "CVE-2024-00001",
+          "source": {
+            "url": "https://acme.com/security/advisories/CVE-2024-00001",
+            "name": "Acme Security Advisory"
+          }
+        }
+      ],
+      "workaround": "Disable remote access feature until patch is applied",
+      "recommendation": "vendor_fix: Upgrade to Product Zeta 1.0.1 or later\nworkaround: Disable remote access feature until patch is applied"
+    },
+    {
+      "id": "CVE-2024-00002",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-00002"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "NVD",
+            "url": "https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N&version=3.1"
+          },
+          "score": 6.5,
+          "severity": "medium",
+          "method": "CVSSv31",
+          "vector": "AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N"
+        }
+      ],
+      "analysis": {
+        "state": "resolved",
+        "detail": "vendor_fix: Upgrade to Product Eta 2.3.0 or later",
+        "response": [
+          "update"
+        ]
+      },
+      "affects": [
+        {
+          "ref": "CSAFPID-ETA-2X-OLD"
+        },
+        {
+          "ref": "CSAFPID-ETA-230",
+          "versions": [
+            {
+              "version": "2.3.0",
+              "status": "unaffected"
+            }
+          ]
+        }
+      ],
+      "description": "An information disclosure vulnerability in Product Eta versions 2.0.0 through 2.2.9.",
+      "cwes": [
+        200
+      ],
+      "references": [
+        {
+          "id": "CVE-2024-00002",
+          "source": {
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-00002",
+            "name": "NVD Entry"
+          }
+        }
+      ],
+      "recommendation": "vendor_fix: Upgrade to Product Eta 2.3.0 or later"
+    },
+    {
+      "id": "CVE-2024-00003",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-00003"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "NVD",
+            "url": "https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:N/A:N&version=3.1"
+          },
+          "score": 4.3,
+          "severity": "medium",
+          "method": "CVSSv31",
+          "vector": "AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:N/A:N"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "detail": "Currently investigating the impact on Product Theta. Preliminary analysis suggests minimal risk. Expected resolution: 2026-01-28."
+      },
+      "affects": [
+        {
+          "ref": "CSAFPID-THETA-600",
+          "versions": [
+            {
+              "version": "6.0.0",
+              "status": "unknown"
+            }
+          ]
+        }
+      ],
+      "description": "A potential information disclosure vulnerability in Product Theta.",
+      "cwes": [
+        209
+      ],
+      "references": [
+        {
+          "id": "CVE-2024-00003",
+          "source": {
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-00003",
+            "name": "NVD Entry"
+          }
+        }
+      ]
+    }
+  ],
+  "externalReferences": [
+    {
+      "type": "vcs",
+      "url": "https://psirt.acme.com/vex/2026/ACME-VEX-2026-001.json",
+      "comment": "Canonical URL for this VEX document"
+    },
+    {
+      "type": "website",
+      "url": "https://acme.com/security/advisories",
+      "comment": "Acme Security Advisories"
+    },
+    {
+      "type": "website",
+      "url": "https://psirt.acme.com",
+      "comment": "Acme Product Security Response Center"
+    },
+    {
+      "type": "website",
+      "url": "https://logging.apache.org/log4j/2.x/security.html",
+      "comment": "Log4Shell Security Advisory"
+    }
+  ]
+}
