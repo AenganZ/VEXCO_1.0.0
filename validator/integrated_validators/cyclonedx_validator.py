@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
-CycloneDX Enhanced Validator v2.0
-Complete implementation of all CycloneDX VEX business rules
+CycloneDX Validator v2.1
+Based on CycloneDX Specification v1.7
+https://cyclonedx.org/docs/1.7/json/
+
+Only validates rules explicitly stated in the official specification.
 """
 
 import json
@@ -13,7 +16,7 @@ from datetime import datetime
 
 def validate_cyclonedx(data: Dict[str, Any], schema: Dict[str, Any]) -> Tuple[bool, List[Dict[str, Any]]]:
     """
-    Complete CycloneDX validation with all VEX business rules
+    CycloneDX validation based on official specification v1.7
     
     Returns:
         (is_valid, errors) - where errors include severity and rule_id
@@ -46,7 +49,8 @@ def validate_cyclonedx(data: Dict[str, Any], schema: Dict[str, Any]) -> Tuple[bo
         })
         return False, errors
     
-    # ============ STEP 2: CycloneDX VEX Business Rules ============
+    # ============ STEP 2: CycloneDX Specification Rules ============
+    # Reference: https://cyclonedx.org/docs/1.7/json/
     
     # Document-level validations
     _validate_document_metadata(data, errors)
@@ -58,6 +62,7 @@ def validate_cyclonedx(data: Dict[str, Any], schema: Dict[str, Any]) -> Tuple[bo
     bom_refs = _collect_bom_refs(data)
     
     # CDX-BOMREF-DUP-001: Validate bom-ref uniqueness
+    # Spec: "Every bom-ref must be unique within the BOM"
     _validate_bomref_uniqueness(data, errors)
     
     # Validate vulnerabilities
@@ -71,9 +76,16 @@ def validate_cyclonedx(data: Dict[str, Any], schema: Dict[str, Any]) -> Tuple[bo
 
 
 def _validate_document_metadata(data: Dict[str, Any], errors: List[Dict[str, Any]]):
-    """Validate CycloneDX document metadata requirements"""
+    """
+    Validate CycloneDX document metadata requirements
+    
+    Spec Reference:
+    - bomFormat: MUST be "CycloneDX"
+    - version: Value must be greater or equal to 1
+    """
     
     # CDX-FORMAT-001: bomFormat must be "CycloneDX"
+    # Spec: "This value must be 'CycloneDX'"
     if "bomFormat" in data:
         if data["bomFormat"] != "CycloneDX":
             errors.append({
@@ -85,6 +97,7 @@ def _validate_document_metadata(data: Dict[str, Any], errors: List[Dict[str, Any
             })
     
     # CDX-VERSION-001: version must be >= 1
+    # Spec: "Value must be greater or equal to 1"
     if "version" in data:
         version = data["version"]
         if isinstance(version, int) and version < 1:
@@ -98,25 +111,17 @@ def _validate_document_metadata(data: Dict[str, Any], errors: List[Dict[str, Any
 
 
 def _validate_bomref_uniqueness(data: Dict[str, Any], errors: List[Dict[str, Any]]):
-    """Validate that all bom-ref values are unique"""
+    """
+    Validate that all bom-ref values are unique
+    
+    Spec: "Every bom-ref must be unique within the BOM"
+    """
     
     bomrefs = {}  # bom-ref -> path
     
     # Collect from components
     if "components" in data and isinstance(data["components"], list):
-        for idx, comp in enumerate(data["components"]):
-            if isinstance(comp, dict) and "bom-ref" in comp:
-                ref = comp["bom-ref"]
-                if ref in bomrefs:
-                    errors.append({
-                        "path": f"/components/{idx}/bom-ref",
-                        "message": f"[VEX-CycloneDX] bom-ref '{ref}' appears multiple times (first at {bomrefs[ref]}) - all bom-refs MUST be unique",
-                        "schema_path": f"/components/{idx}/bom-ref",
-                        "severity": "error",
-                        "rule_id": "CDX-BOMREF-DUP-001"
-                    })
-                else:
-                    bomrefs[ref] = f"/components/{idx}"
+        _collect_bomrefs_recursive(data["components"], "/components", bomrefs, errors)
     
     # Collect from services
     if "services" in data and isinstance(data["services"], list):
@@ -126,7 +131,7 @@ def _validate_bomref_uniqueness(data: Dict[str, Any], errors: List[Dict[str, Any
                 if ref in bomrefs:
                     errors.append({
                         "path": f"/services/{idx}/bom-ref",
-                        "message": f"[VEX-CycloneDX] bom-ref '{ref}' appears multiple times (first at {bomrefs[ref]}) - all bom-refs MUST be unique",
+                        "message": f"[VEX-CycloneDX] bom-ref '{ref}' is duplicated (first at {bomrefs[ref]}) - all bom-refs MUST be unique",
                         "schema_path": f"/services/{idx}/bom-ref",
                         "severity": "error",
                         "rule_id": "CDX-BOMREF-DUP-001"
@@ -142,7 +147,7 @@ def _validate_bomref_uniqueness(data: Dict[str, Any], errors: List[Dict[str, Any
                 if ref in bomrefs:
                     errors.append({
                         "path": "/metadata/component/bom-ref",
-                        "message": f"[VEX-CycloneDX] bom-ref '{ref}' appears multiple times (first at {bomrefs[ref]}) - all bom-refs MUST be unique",
+                        "message": f"[VEX-CycloneDX] bom-ref '{ref}' is duplicated (first at {bomrefs[ref]}) - all bom-refs MUST be unique",
                         "schema_path": "/metadata/component/bom-ref",
                         "severity": "error",
                         "rule_id": "CDX-BOMREF-DUP-001"
@@ -151,15 +156,44 @@ def _validate_bomref_uniqueness(data: Dict[str, Any], errors: List[Dict[str, Any
                     bomrefs[ref] = "/metadata/component"
 
 
+def _collect_bomrefs_recursive(components: List, path_prefix: str, bomrefs: Dict, errors: List):
+    """Recursively collect bom-refs from nested components"""
+    for idx, comp in enumerate(components):
+        if isinstance(comp, dict):
+            if "bom-ref" in comp:
+                ref = comp["bom-ref"]
+                current_path = f"{path_prefix}/{idx}"
+                if ref in bomrefs:
+                    errors.append({
+                        "path": f"{current_path}/bom-ref",
+                        "message": f"[VEX-CycloneDX] bom-ref '{ref}' is duplicated (first at {bomrefs[ref]}) - all bom-refs MUST be unique",
+                        "schema_path": f"{current_path}/bom-ref",
+                        "severity": "error",
+                        "rule_id": "CDX-BOMREF-DUP-001"
+                    })
+                else:
+                    bomrefs[ref] = current_path
+            
+            # Check nested components
+            if "components" in comp and isinstance(comp["components"], list):
+                _collect_bomrefs_recursive(comp["components"], f"{path_prefix}/{idx}/components", bomrefs, errors)
+
+
 def _collect_bom_refs(data: Dict[str, Any]) -> Set[str]:
     """Collect all bom-ref values from components, services, etc."""
     refs = set()
     
+    def collect_from_components(components: List):
+        for comp in components:
+            if isinstance(comp, dict):
+                if "bom-ref" in comp:
+                    refs.add(comp["bom-ref"])
+                if "components" in comp and isinstance(comp["components"], list):
+                    collect_from_components(comp["components"])
+    
     # From components
     if "components" in data and isinstance(data["components"], list):
-        for comp in data["components"]:
-            if isinstance(comp, dict) and "bom-ref" in comp:
-                refs.add(comp["bom-ref"])
+        collect_from_components(data["components"])
     
     # From services
     if "services" in data and isinstance(data["services"], list):
@@ -177,119 +211,37 @@ def _collect_bom_refs(data: Dict[str, Any]) -> Set[str]:
 
 
 def _validate_deprecated_fields(data: Dict[str, Any], errors: List[Dict[str, Any]]):
-    """Validate deprecated/legacy fields in CycloneDX 1.7"""
+    """
+    Validate deprecated/legacy fields in CycloneDX 1.7
+    
+    Spec Reference: "Tools (legacy) Deprecated"
+    """
     
     # CDX-DEPRECATED-001: metadata.tools[] (legacy)
+    # Spec: "Tools (legacy) Deprecated"
     if "metadata" in data and isinstance(data["metadata"], dict):
         if "tools" in data["metadata"]:
             tools = data["metadata"]["tools"]
             if isinstance(tools, list) and len(tools) > 0:
                 errors.append({
                     "path": "/metadata/tools",
-                    "message": "[VEX-CycloneDX] 'metadata.tools[]' is DEPRECATED in CycloneDX 1.7. Use 'metadata.tools' (object) with 'components' or 'services' arrays instead",
+                    "message": "[VEX-CycloneDX] 'metadata.tools[]' array format is DEPRECATED in CycloneDX 1.7. Use 'metadata.tools' object with 'components' or 'services' arrays instead",
                     "schema_path": "/metadata/tools",
                     "severity": "warning",
                     "rule_id": "CDX-DEPRECATED-001"
                 })
-    
-    # CDX-DEPRECATED-002: components[].modified
-    if "components" in data and isinstance(data["components"], list):
-        for idx, comp in enumerate(data["components"]):
-            if isinstance(comp, dict) and "modified" in comp:
-                errors.append({
-                    "path": f"/components/{idx}/modified",
-                    "message": "[VEX-CycloneDX] 'component.modified' is deprecated (still valid but not recommended). May be removed in future versions. Consider using 'component.pedigree' instead",
-                    "schema_path": f"/components/{idx}/modified",
-                    "severity": "warning",
-                    "rule_id": "CDX-DEPRECATED-002"
-                })
-    
-    # CDX-DEPRECATED-003: vulnerabilities[].tools[] (legacy)
-    if "vulnerabilities" in data and isinstance(data["vulnerabilities"], list):
-        for idx, vuln in enumerate(data["vulnerabilities"]):
-            if isinstance(vuln, dict):
-                if "tools" in vuln:
-                    tools = vuln["tools"]
-                    if isinstance(tools, list) and len(tools) > 0:
-                        errors.append({
-                            "path": f"/vulnerabilities/{idx}/tools",
-                            "message": "[VEX-CycloneDX] 'vulnerability.tools[]' is DEPRECATED in CycloneDX 1.7. Use 'vulnerability.tools' (object) with 'components' or 'services' arrays instead",
-                            "schema_path": f"/vulnerabilities/{idx}/tools",
-                            "severity": "warning",
-                            "rule_id": "CDX-DEPRECATED-003"
-                        })
-    
-    # CDX-DEPRECATED-004: formulation[].components[].identities[] (deprecated)
-    if "formulation" in data and isinstance(data["formulation"], list):
-        for f_idx, formula in enumerate(data["formulation"]):
-            if isinstance(formula, dict) and "components" in formula:
-                components = formula["components"]
-                if isinstance(components, list):
-                    for c_idx, comp in enumerate(components):
-                        if isinstance(comp, dict) and "identities" in comp:
-                            errors.append({
-                                "path": f"/formulation/{f_idx}/components/{c_idx}/identities",
-                                "message": "[VEX-CycloneDX] 'identities' field is deprecated (still valid but not recommended). May be removed in future versions. Consider using 'evidence.identity' instead",
-                                "schema_path": f"/formulation/{f_idx}/components/{c_idx}/identities",
-                                "severity": "warning",
-                                "rule_id": "CDX-DEPRECATED-004"
-                            })
-    
-    # CDX-DEPRECATED-005: Check Tool objects (deprecated type)
-    # Check in metadata.toolChoice
-    if "metadata" in data and isinstance(data["metadata"], dict):
-        if "toolChoice" in data["metadata"]:
-            tool_choice = data["metadata"]["toolChoice"]
-            if isinstance(tool_choice, dict):
-                for tool_array_key in ["toolReferences", "toolChoice"]:
-                    if tool_array_key in tool_choice:
-                        tool_array = tool_choice[tool_array_key]
-                        if isinstance(tool_array, list):
-                            for t_idx, tool_item in enumerate(tool_array):
-                                if isinstance(tool_item, dict):
-                                    # Check if it's using deprecated 'tool' structure
-                                    if "vendor" in tool_item and "name" in tool_item and "bom-ref" not in tool_item:
-                                        errors.append({
-                                            "path": f"/metadata/toolChoice/{tool_array_key}/{t_idx}",
-                                            "message": "[VEX-CycloneDX] Deprecated 'tool' object structure (still valid but not recommended). Consider using 'component' or 'service' objects instead",
-                                            "schema_path": f"/metadata/toolChoice/{tool_array_key}/{t_idx}",
-                                            "severity": "warning",
-                                            "rule_id": "CDX-DEPRECATED-005"
-                                        })
 
 
 def _validate_vulnerability(vuln: Dict[str, Any], idx: int, bom_refs: Set[str], errors: List[Dict[str, Any]]):
-    """Validate CycloneDX vulnerability with all VEX business rules"""
-    path_prefix = f"/vulnerabilities/{idx}"
+    """
+    Validate CycloneDX vulnerability with specification rules
     
-    # CDX-ID-001: Vulnerability ID should be present
-    if "id" not in vuln:
-        errors.append({
-            "path": path_prefix,
-            "message": "[VEX-CycloneDX] vulnerability SHOULD have an 'id' field to identify the vulnerability (e.g., CVE-2024-1234)",
-            "schema_path": f"{path_prefix}/id",
-            "severity": "warning",
-            "rule_id": "CDX-ID-001"
-        })
-    elif "id" in vuln:
-        vuln_id = vuln["id"]
-        if isinstance(vuln_id, str):
-            if len(vuln_id.strip()) == 0:
-                errors.append({
-                    "path": f"{path_prefix}/id",
-                    "message": "[VEX-CycloneDX] vulnerability id should not be empty",
-                    "schema_path": f"{path_prefix}/id",
-                    "severity": "error",
-                    "rule_id": "CDX-ID-002"
-                })
-            elif not _is_valid_vuln_id(vuln_id):
-                errors.append({
-                    "path": f"{path_prefix}/id",
-                    "message": f"[VEX-CycloneDX] vulnerability id '{vuln_id}' should follow standard format (CVE-YYYY-NNNNN, GHSA-xxxx-xxxx-xxxx, etc.)",
-                    "schema_path": f"{path_prefix}/id",
-                    "severity": "warning",
-                    "rule_id": "CDX-ID-003"
-                })
+    Spec Reference - analysis:
+    - state: enum values defined
+    - justification: enum values defined, "should be specified for all not_affected cases"
+    - response: enum values defined
+    """
+    path_prefix = f"/vulnerabilities/{idx}"
     
     # Validate analysis if present
     if "analysis" in vuln:
@@ -306,85 +258,54 @@ def _validate_vulnerability(vuln: Dict[str, Any], idx: int, bom_refs: Set[str], 
 
 
 def _validate_analysis(analysis: Dict[str, Any], vuln_path: str, errors: List[Dict[str, Any]]):
-    """CDX-AN-STATE-001: Validate analysis object with VEX-specific rules"""
+    """
+    Validate analysis object with specification rules
+    
+    Spec Reference:
+    - state: Must be one of the defined enum values
+    - justification: Must be one of the defined enum values
+    - response: Must be one of the defined enum values
+    - not_affected: "Justification should be specified for all not_affected cases" (SHOULD)
+    """
     analysis_path = f"{vuln_path}/analysis"
     
     state = analysis.get("state")
     
-    # State-specific requirements
+    # CDX-STATE-VAL-001: Validate state values
+    # Spec: enum values defined in specification
+    if state:
+        valid_states = {
+            "resolved",
+            "resolved_with_pedigree",
+            "exploitable",
+            "in_triage",
+            "false_positive",
+            "not_affected"
+        }
+        
+        if state not in valid_states:
+            errors.append({
+                "path": f"{analysis_path}/state",
+                "message": f"[VEX-CycloneDX] Invalid state value '{state}'. Must be one of: {', '.join(sorted(valid_states))}",
+                "schema_path": f"{analysis_path}/state",
+                "severity": "error",
+                "rule_id": "CDX-STATE-VAL-001"
+            })
+    
+    # CDX-JUST-SHOULD-001: not_affected SHOULD have justification
+    # Spec: "Justification should be specified for all not_affected cases"
     if state == "not_affected":
-        # SHOULD have justification (machine-readable)
         if "justification" not in analysis:
             errors.append({
                 "path": analysis_path,
-                "message": "[VEX-CycloneDX] analysis with state 'not_affected' SHOULD include 'justification' field (machine-readable reason)",
+                "message": "[VEX-CycloneDX] analysis with state 'not_affected' SHOULD include 'justification' field",
                 "schema_path": f"{analysis_path}/state",
                 "severity": "warning",
-                "rule_id": "CDX-AN-STATE-001"
-            })
-        
-        # SHOULD have detail (human-readable)
-        if "detail" not in analysis:
-            errors.append({
-                "path": analysis_path,
-                "message": "[VEX-CycloneDX] analysis with state 'not_affected' SHOULD include 'detail' field (human-readable explanation)",
-                "schema_path": f"{analysis_path}/state",
-                "severity": "warning",
-                "rule_id": "CDX-AN-STATE-002"
-            })
-        elif "detail" in analysis:
-            detail = analysis["detail"]
-            if isinstance(detail, str) and len(detail.strip()) == 0:
-                errors.append({
-                    "path": f"{analysis_path}/detail",
-                    "message": "[VEX-CycloneDX] detail field should provide meaningful explanation",
-                    "schema_path": f"{analysis_path}/detail",
-                    "severity": "warning",
-                    "rule_id": "CDX-AN-STATE-003"
-                })
-    
-    elif state == "exploitable":
-        # SHOULD have response
-        if "response" not in analysis:
-            errors.append({
-                "path": analysis_path,
-                "message": "[VEX-CycloneDX] analysis with state 'exploitable' SHOULD include 'response' field describing remediation actions",
-                "schema_path": f"{analysis_path}/state",
-                "severity": "warning",
-                "rule_id": "CDX-AN-STATE-004"
-            })
-        
-        # SHOULD have detail about exploitability
-        if "detail" not in analysis:
-            errors.append({
-                "path": analysis_path,
-                "message": "[VEX-CycloneDX] analysis with state 'exploitable' SHOULD include 'detail' field describing exploitation scenario",
-                "schema_path": f"{analysis_path}/state",
-                "severity": "warning",
-                "rule_id": "CDX-AN-STATE-005"
-            })
-    
-    elif state == "in_triage":
-        if "detail" not in analysis:
-            errors.append({
-                "path": analysis_path,
-                "message": "[VEX-CycloneDX] analysis with state 'in_triage' SHOULD include 'detail' field describing investigation status",
-                "schema_path": f"{analysis_path}/state",
-                "severity": "warning",
-                "rule_id": "CDX-AN-STATE-006"
-            })
-    
-    elif state == "false_positive":
-        if "detail" not in analysis:
-            errors.append({
-                "path": analysis_path,
-                "message": "[VEX-CycloneDX] analysis with state 'false_positive' SHOULD include 'detail' field explaining why it's a false positive",
-                "schema_path": f"{analysis_path}/state",
-                "severity": "warning",
-                "rule_id": "CDX-AN-STATE-007"
+                "rule_id": "CDX-JUST-SHOULD-001"
             })
     
     # CDX-JUST-VAL-001: Validate justification values
+    # Spec: enum values defined in specification
     if "justification" in analysis:
         justification = analysis["justification"]
         valid_justifications = {
@@ -409,6 +330,7 @@ def _validate_analysis(analysis: Dict[str, Any], vuln_path: str, errors: List[Di
             })
     
     # CDX-RESP-VAL-001: Validate response values
+    # Spec: enum values defined in specification
     if "response" in analysis:
         responses = analysis["response"]
         if isinstance(responses, list):
@@ -430,7 +352,7 @@ def _validate_analysis(analysis: Dict[str, Any], vuln_path: str, errors: List[Di
                         "rule_id": "CDX-RESP-VAL-001"
                     })
     
-    # CDX-TIMESTAMP-001: Validate timestamp logic
+    # CDX-TS-001: Validate timestamp format
     if "firstIssued" in analysis:
         fi_result = _validate_timestamp(analysis["firstIssued"], "firstIssued")
         if not fi_result["valid"]:
@@ -439,7 +361,7 @@ def _validate_analysis(analysis: Dict[str, Any], vuln_path: str, errors: List[Di
                 "message": f"[VEX-CycloneDX] {fi_result['reason']}",
                 "schema_path": f"{analysis_path}/firstIssued",
                 "severity": fi_result["severity"],
-                "rule_id": "CDX-TIMESTAMP-001"
+                "rule_id": "CDX-TS-001"
             })
     
     if "lastUpdated" in analysis:
@@ -450,34 +372,25 @@ def _validate_analysis(analysis: Dict[str, Any], vuln_path: str, errors: List[Di
                 "message": f"[VEX-CycloneDX] {lu_result['reason']}",
                 "schema_path": f"{analysis_path}/lastUpdated",
                 "severity": lu_result["severity"],
-                "rule_id": "CDX-TIMESTAMP-002"
+                "rule_id": "CDX-TS-002"
             })
-        
-        # Check firstIssued < lastUpdated
-        if "firstIssued" in analysis:
-            try:
-                fi = _parse_datetime(analysis["firstIssued"])
-                lu = _parse_datetime(analysis["lastUpdated"])
-                if fi and lu and lu < fi:
-                    errors.append({
-                        "path": f"{analysis_path}/lastUpdated",
-                        "message": "[VEX-CycloneDX] lastUpdated cannot be earlier than firstIssued",
-                        "schema_path": f"{analysis_path}/lastUpdated",
-                        "severity": "warning",
-                        "rule_id": "CDX-TIMESTAMP-003"
-                    })
-            except:
-                pass
 
 
 def _validate_affect(affect: Dict[str, Any], path: str, bom_refs: Set[str], errors: List[Dict[str, Any]]):
-    """CDX-REF-001 & CDX-VERSIONS-001: Validate affects entry"""
+    """
+    Validate affects entry
     
-    # CDX-REF-001: ref must point to valid bom-ref
+    Spec Reference:
+    - ref: References a component or service by bom-ref (required)
+    - versions: Must have either 'version' or 'range'
+    """
+    
+    # CDX-REF-001: ref must be present
+    # Spec: "References a component or service by the objects bom-ref"
     if "ref" not in affect:
         errors.append({
             "path": path,
-            "message": "[VEX-CycloneDX] affect entry MUST have 'ref' field to identify the affected component",
+            "message": "[VEX-CycloneDX] affect entry MUST have 'ref' field",
             "schema_path": f"{path}/ref",
             "severity": "error",
             "rule_id": "CDX-REF-001"
@@ -488,7 +401,7 @@ def _validate_affect(affect: Dict[str, Any], path: str, bom_refs: Set[str], erro
             if len(ref.strip()) == 0:
                 errors.append({
                     "path": f"{path}/ref",
-                    "message": "[VEX-CycloneDX] ref should not be empty",
+                    "message": "[VEX-CycloneDX] ref MUST NOT be empty",
                     "schema_path": f"{path}/ref",
                     "severity": "error",
                     "rule_id": "CDX-REF-002"
@@ -496,13 +409,14 @@ def _validate_affect(affect: Dict[str, Any], path: str, bom_refs: Set[str], erro
             elif ref not in bom_refs:
                 errors.append({
                     "path": f"{path}/ref",
-                    "message": f"[VEX-CycloneDX] ref '{ref}' does not match any component bom-ref in this BOM. Referenced component must exist in components[], services[], or metadata.component.",
+                    "message": f"[VEX-CycloneDX] ref '{ref}' does not match any bom-ref in this BOM",
                     "schema_path": f"{path}/ref",
                     "severity": "error",
                     "rule_id": "CDX-REF-003"
                 })
     
     # CDX-VERSIONS-001: Validate versions array
+    # Spec: "One of: Option 1 (version required), Option 2 (range required)"
     if "versions" in affect and isinstance(affect["versions"], list):
         for ver_idx, version in enumerate(affect["versions"]):
             if isinstance(version, dict):
@@ -512,20 +426,33 @@ def _validate_affect(affect: Dict[str, Any], path: str, bom_refs: Set[str], erro
                 if not has_version and not has_range:
                     errors.append({
                         "path": f"{path}/versions/{ver_idx}",
-                        "message": "[VEX-CycloneDX] version entry MUST have either 'version' (single version) or 'range' (version range)",
+                        "message": "[VEX-CycloneDX] version entry MUST have either 'version' or 'range'",
                         "schema_path": f"{path}/versions/{ver_idx}",
                         "severity": "error",
                         "rule_id": "CDX-VERSIONS-001"
                     })
+                
+                # CDX-VERSIONS-002: Validate status values
+                if "status" in version:
+                    status = version["status"]
+                    valid_statuses = {"affected", "unaffected", "unknown"}
+                    if status not in valid_statuses:
+                        errors.append({
+                            "path": f"{path}/versions/{ver_idx}/status",
+                            "message": f"[VEX-CycloneDX] Invalid version status '{status}'. Must be one of: {', '.join(sorted(valid_statuses))}",
+                            "schema_path": f"{path}/versions/{ver_idx}/status",
+                            "severity": "error",
+                            "rule_id": "CDX-VERSIONS-002"
+                        })
 
 
 def _validate_timestamp(value: Any, context: str) -> Dict[str, Any]:
-    """Validate timestamp format and logic"""
+    """Validate timestamp format (ISO 8601 date-time)"""
     
     if not isinstance(value, str):
         return {
             "valid": False,
-            "reason": f"{context} must be a string in ISO 8601 format",
+            "reason": f"{context} must be a string in ISO 8601 date-time format",
             "severity": "error"
         }
     
@@ -537,7 +464,6 @@ def _validate_timestamp(value: Any, context: str) -> Dict[str, Any]:
             "severity": "error"
         }
     
-    # Future date check removed - not part of official CycloneDX 1.7 spec
     return {"valid": True}
 
 
@@ -566,20 +492,6 @@ def _parse_datetime(value: str) -> datetime:
     return None
 
 
-def _is_valid_vuln_id(vuln_id: str) -> bool:
-    """Check if vulnerability ID follows standard patterns"""
-    patterns = [
-        r'^CVE-\d{4}-\d{4,}$',
-        r'^GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}$',
-        r'^PYSEC-\d{4}-\d+$',
-        r'^RUSTSEC-\d{4}-\d+$',
-        r'^OSV-\d{4}-\d+$',
-        r'^GO-\d{4}-\d+$',
-    ]
-    
-    return any(re.match(pattern, vuln_id, re.IGNORECASE) for pattern in patterns)
-
-
 def load_schema(schema_path: str) -> Dict[str, Any]:
     """Load JSON schema from file"""
     with open(schema_path, 'r', encoding='utf-8') as f:
@@ -605,14 +517,14 @@ if __name__ == "__main__":
     is_valid, errors = validate_cyclonedx(document, schema)
     
     if is_valid:
-        print("✓ Valid CycloneDX document")
-        print("  - JSON Schema: ✓")
-        print("  - CycloneDX VEX Rules: ✓")
+        print("Valid CycloneDX document")
+        print("  - JSON Schema: OK")
+        print("  - CycloneDX Spec Rules: OK")
     else:
         error_items = [e for e in errors if e["severity"] == "error"]
         warning_items = [e for e in errors if e["severity"] == "warning"]
         
-        print(f"✗ Invalid CycloneDX document")
+        print(f"Invalid CycloneDX document")
         if error_items:
             print(f"\n  Errors ({len(error_items)}):")
             for error in error_items:

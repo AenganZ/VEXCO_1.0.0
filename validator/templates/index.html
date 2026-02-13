@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VEXCO 1.0</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">
+                <div class="logo-icon">VEX</div>
+                <span class="logo-text">VEXCO</span>
+            </a>
+            <nav class="nav-links">
+                <a href="https://github.com/openvex/spec" target="_blank">OpenVEX 0.2.0</a>
+                <a href="https://docs.oasis-open.org/csaf/csaf/v2.1/csaf-v2.1.html" target="_blank">CSAF 2.1</a>
+                <a href="https://cyclonedx.org/docs/1.7/json" target="_blank">CycloneDX 1.7</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1>VEX Converter 1.0.0</h1>
+            <p>Validate and convert VEX documents between OpenVEX, CSAF, and CycloneDX formats. Our tools make vulnerability exchange easier, faster, and more reliable.</p>
+        </section>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="validator">Validator</button>
+            <button class="tab-btn" data-tab="converter">Converter</button>
+        </div>
+
+        <!-- ============ VALIDATOR TAB ============ -->
+        <div id="validator" class="tab-content active">
+            <div class="card">
+                <div class="card-title">
+                    Upload Document
+                    <span class="badge">JSON</span>
+                </div>
+                
+                <div class="alert alert-info">
+                    Upload your JSON file and the format will be automatically detected.
+                </div>
+
+                <div class="file-upload-area" id="validatorUploadArea">
+                    <div class="upload-icon">&#128196;</div>
+                    <div class="upload-text">
+                        <strong>Click to select file</strong> or drag and drop here
+                    </div>
+                    <div class="upload-hint">JSON files only (OpenVEX, CSAF, CycloneDX)</div>
+                    <input type="file" id="validatorFileInput" class="file-input" accept=".json,application/json">
+                </div>
+
+                <div class="file-info" id="validatorFileInfo">
+                    <div class="file-details">
+                        <div class="file-icon">&#128196;</div>
+                        <div>
+                            <div class="file-name" id="validatorFileName"></div>
+                            <div class="file-size" id="validatorFileSize"></div>
+                        </div>
+                    </div>
+                    <button class="file-remove" id="validatorClearBtn">&times;</button>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-secondary" id="showRulesBtn">View Rules</button>
+                    <button class="btn btn-primary" id="validateBtn" disabled>Validate</button>
+                </div>
+            </div>
+
+            <!-- Detected Format (VDR 제거됨 - Validator에서는 OpenVEX, CSAF, CycloneDX만) -->
+            <div class="card">
+                <div class="card-title">Detected Format</div>
+                <div class="format-grid">
+                    <div class="format-card" data-format="openvex" id="detectOpenvex">
+                        <div class="format-icon">VEX</div>
+                        <div class="format-name">OpenVEX</div>
+                        <span class="format-version">0.2.0</span>
+                    </div>
+                    <div class="format-card" data-format="csaf" id="detectCsaf">
+                        <div class="format-icon">CSAF</div>
+                        <div class="format-name">CSAF</div>
+                        <span class="format-version">2.1</span>
+                    </div>
+                    <div class="format-card" data-format="cyclonedx" id="detectCyclonedx">
+                        <div class="format-icon">CDX</div>
+                        <div class="format-name">CycloneDX</div>
+                        <span class="format-version">1.7</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rule Reference (collapsible) -->
+            <div class="card rule-reference" id="ruleReference">
+                <div class="card-title">
+                    Validation Rules Reference
+                    <button class="btn btn-secondary" id="hideRulesBtn" style="margin-left: auto; padding: 6px 12px;">Close</button>
+                </div>
+                <div id="ruleCategories"></div>
+            </div>
+
+            <!-- Loading -->
+            <div class="card loading" id="validatorLoading">
+                <div class="spinner"></div>
+                <div class="loading-text">Validating document...</div>
+            </div>
+
+            <!-- Results -->
+            <div class="card results-section" id="validatorResults">
+                <div class="result-header">
+                    <div class="result-status" id="resultStatus">
+                        <span class="status-icon" id="statusIcon"></span>
+                        <span id="statusText"></span>
+                    </div>
+                    <div class="validation-badges" id="validationBadges"></div>
+                </div>
+                <div id="resultContent"></div>
+            </div>
+        </div>
+
+        <!-- ============ CONVERTER TAB ============ -->
+        <div id="converter" class="tab-content">
+            <div class="card">
+                <div class="card-title">
+                    Upload Source Document
+                    <span class="badge">v{{ converter_version }}</span>
+                </div>
+                
+                {% if not converter_available %}
+                <div class="alert alert-error">
+                    VEX Converter module is not available. Please check your installation.
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    Upload your VEX document and select the target format for conversion.
+                </div>
+                {% endif %}
+
+                <div class="file-upload-area" id="converterUploadArea">
+                    <div class="upload-icon">&#128196;</div>
+                    <div class="upload-text">
+                        <strong>Click to select file</strong> or drag and drop here
+                    </div>
+                    <div class="upload-hint">JSON files only (OpenVEX, CSAF, CycloneDX)</div>
+                    <input type="file" id="converterFileInput" class="file-input" accept=".json,application/json">
+                </div>
+
+                <div class="file-info" id="converterFileInfo">
+                    <div class="file-details">
+                        <div class="file-icon">&#128196;</div>
+                        <div>
+                            <div class="file-name" id="converterFileName"></div>
+                            <div class="file-size" id="converterFileSize"></div>
+                        </div>
+                    </div>
+                    <button class="file-remove" id="converterClearBtn">&times;</button>
+                </div>
+            </div>
+
+            <!-- Source Format -->
+            <div class="card">
+                <div class="card-title">Detected Format</div>
+                <div class="format-grid">
+                    <div class="format-card" data-format="openvex" id="srcOpenvex">
+                        <div class="format-icon">VEX</div>
+                        <div class="format-name">OpenVEX</div>
+                        <span class="format-version">0.2.0</span>
+                    </div>
+                    <div class="format-card" data-format="csaf" id="srcCsaf">
+                        <div class="format-icon">CSAF</div>
+                        <div class="format-name">CSAF</div>
+                        <span class="format-version">2.1</span>
+                    </div>
+                    <div class="format-card" data-format="cyclonedx" id="srcCyclonedx">
+                        <div class="format-icon">CDX</div>
+                        <div class="format-name">CycloneDX</div>
+                        <span class="format-version">1.7</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Target Format (VDR 추가됨 - Converter에서만 VDR 선택 가능) -->
+            <div class="card">
+                <div class="card-title">Target Format</div>
+                <div class="format-grid" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="format-card" data-target="openvex" id="tgtOpenvex">
+                        <div class="mapping-tooltip" id="tooltipOpenvex"></div>
+                        <div class="format-icon">VEX</div>
+                        <div class="format-name">OpenVEX</div>
+                        <span class="format-version">0.2.0</span>
+                    </div>
+                    <div class="format-card" data-target="csaf" id="tgtCsaf">
+                        <div class="mapping-tooltip" id="tooltipCsaf"></div>
+                        <div class="format-icon">CSAF</div>
+                        <div class="format-name">CSAF</div>
+                        <span class="format-version">2.1</span>
+                    </div>
+                    <div class="format-card" data-target="cyclonedx" id="tgtCyclonedx">
+                        <div class="mapping-tooltip" id="tooltipCyclonedx"></div>
+                        <div class="format-icon">CDX</div>
+                        <div class="format-name">CycloneDX</div>
+                        <span class="format-version">1.7</span>
+                    </div>
+                    <div class="format-card" data-target="vdr" id="tgtVdr">
+                        <div class="mapping-tooltip" id="tooltipVdr"></div>
+                        <div class="format-icon">VDR</div>
+                        <div class="format-name">VDR</div>
+                        <span class="format-version">CDX+</span>
+                    </div>
+                </div>
+
+                <div class="options-section">
+                    <div class="option-item">
+                        <input type="checkbox" id="optReversible">
+                        <label class="option-label" for="optReversible">Reversible Mode</label>
+                    </div>
+                    <div class="option-desc">Store original data in extension fields for lossless roundtrip conversion</div>
+                    
+                    <div class="option-item">
+                        <input type="checkbox" id="optRestore">
+                        <label class="option-label" for="optRestore">Restore Mode</label>
+                    </div>
+                    <div class="option-desc">Restore original fields from extension data (use with previously converted documents)</div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" id="convertBtn" disabled>Convert</button>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div class="card loading" id="converterLoading">
+                <div class="spinner"></div>
+                <div class="loading-text">Converting document...</div>
+            </div>
+
+            <!-- Conversion Results -->
+            <div class="card results-section" id="converterResults">
+                <div class="result-header">
+                    <div class="result-status success" id="convertResultStatus">
+                        <span class="status-icon">&#10003;</span>
+                        <span id="convertStatusText">Conversion Complete</span>
+                    </div>
+                    <div>
+                        <button class="btn btn-success" id="downloadBtn">Download JSON</button>
+                    </div>
+                </div>
+                
+                <div class="conversion-result">
+                    <div class="conversion-header">
+                        <div class="conversion-info">
+                            <span id="convSrcFormat">-</span>
+                            <span class="conversion-arrow">&#8594;</span>
+                            <span id="convTgtFormat">-</span>
+                        </div>
+                        <span id="convTimestamp"></span>
+                    </div>
+                    <div class="json-preview">
+                        <pre id="convertedJson"></pre>
+                    </div>
+                </div>
+                
+                <!-- Field Mapping Display (레이아웃 수정) -->
+                <div class="field-mapping-section" id="fieldMappingSection">
+                    <h4>Field Mappings Applied</h4>
+                    <div class="mapping-table" id="mappingGrid"></div>
+                    <div class="lost-info" id="lostInfo" style="display: none;">
+                        <h5>Information Not Directly Mapped (stored in extension_data if reversible)</h5>
+                        <ul id="lostList"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            Version: {{ converter_version }}
+        </div>
+    </footer>
+
+    <script>
+        // Field mappings storage
+        let fieldMappings = {};
+
+        // Load field mappings on page load
+        fetch('/api/field-mappings')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    fieldMappings = data.mappings;
+                }
+            })
+            .catch(e => console.error('Failed to load field mappings:', e));
+
+        // ============ VALIDATION RULES DATABASE (MUST + SHOULD 포함) ============
+        const validationRules = {
+            openvex: [
+                { id: 'OVX-CTX-001', severity: 'error', desc: '@context must start with https://openvex.dev/ns/' },
+                { id: 'OVX-AUTHOR-001', severity: 'error', desc: 'author must not be empty (MUST)' },
+                // OpenVEX v0.2.0 Spec-based rules only
+                { id: 'OVX-CTX-001', severity: 'error', desc: '@context MUST start with https://openvex.dev/ns/ (MUST)' },
+                { id: 'OVX-ID-001', severity: 'error', desc: '@id MUST NOT be empty (MUST)' },
+                { id: 'OVX-VER-001', severity: 'error', desc: 'version MUST be >= 1 (MUST)' },
+                { id: 'OVX-TS-001', severity: 'error', desc: 'Document timestamp format validation (ISO 8601)' },
+                { id: 'OVX-TS-002', severity: 'error', desc: 'last_updated format validation (ISO 8601)' },
+                { id: 'OVX-TS-003', severity: 'error', desc: 'Statement timestamp format validation (ISO 8601)' },
+                { id: 'OVX-STATE-001', severity: 'error', desc: 'not_affected MUST include justification OR impact_statement (MUST)' },
+                { id: 'OVX-STATE-002', severity: 'error', desc: 'affected MUST include action_statement (MUST)' },
+                { id: 'OVX-STATUS-001', severity: 'error', desc: 'status MUST be one of: not_affected, affected, fixed, under_investigation (MUST)' },
+                { id: 'OVX-JUST-001', severity: 'error', desc: 'justification MUST be valid enum value (MUST)' },
+                { id: 'OVX-VULN-001', severity: 'error', desc: 'vulnerability MUST have name field (MUST)' },
+                { id: 'OVX-VULN-002', severity: 'error', desc: 'vulnerability name MUST NOT be empty (MUST)' },
+                { id: 'OVX-PROD-001', severity: 'error', desc: 'Product MUST have @id field (MUST)' },
+                { id: 'OVX-PROD-002', severity: 'error', desc: 'Product @id MUST NOT be empty (MUST)' }
+            ],
+            cyclonedx: [
+                // CycloneDX v1.7 Spec-based rules only
+                { id: 'CDX-FORMAT-001', severity: 'error', desc: 'bomFormat MUST be "CycloneDX" (MUST)' },
+                { id: 'CDX-VERSION-001', severity: 'error', desc: 'version MUST be >= 1 (MUST)' },
+                { id: 'CDX-BOMREF-DUP-001', severity: 'error', desc: 'All bom-ref values MUST be unique (MUST)' },
+                { id: 'CDX-STATE-VAL-001', severity: 'error', desc: 'analysis.state MUST be valid enum value (MUST)' },
+                { id: 'CDX-JUST-SHOULD-001', severity: 'warning', desc: 'not_affected SHOULD include justification (SHOULD)' },
+                { id: 'CDX-JUST-VAL-001', severity: 'error', desc: 'justification MUST be valid enum value (MUST)' },
+                { id: 'CDX-RESP-VAL-001', severity: 'error', desc: 'response MUST be valid enum value (MUST)' },
+                { id: 'CDX-REF-001', severity: 'error', desc: 'affects entry MUST have ref field (MUST)' },
+                { id: 'CDX-REF-002', severity: 'error', desc: 'affects.ref MUST NOT be empty (MUST)' },
+                { id: 'CDX-REF-003', severity: 'error', desc: 'affects.ref MUST point to existing bom-ref (MUST)' },
+                { id: 'CDX-VERSIONS-001', severity: 'error', desc: 'version entry MUST have version OR range (MUST)' },
+                { id: 'CDX-VERSIONS-002', severity: 'error', desc: 'version.status MUST be valid enum value (MUST)' },
+                { id: 'CDX-TS-001', severity: 'error', desc: 'firstIssued format validation (ISO 8601)' },
+                { id: 'CDX-TS-002', severity: 'error', desc: 'lastUpdated format validation (ISO 8601)' },
+                { id: 'CDX-DEPRECATED-001', severity: 'warning', desc: 'metadata.tools[] array format is deprecated - use tools object' }
+            ],
+            csaf: [
+                // ================================================================================
+                // Mandatory Tests (MUST - errors)
+                // ================================================================================
+                
+                // --- Document Structure ---
+                { id: 'CSAF-DOC-001', severity: 'error', desc: 'VEX requires product_tree' },
+                { id: 'CSAF-DOC-002', severity: 'error', desc: 'product_tree must contain products' },
+                { id: 'CSAF-DOC-003', severity: 'error', desc: 'VEX requires vulnerabilities array' },
+                
+                // --- Product Definition (6.1.x) ---
+                { id: 'CSAF-PROD-001', severity: 'error', desc: 'Product IDs MUST be unique (6.1.2)' },
+                { id: 'CSAF-PROD-002', severity: 'error', desc: 'Product Group IDs MUST be unique (6.1.5)' },
+                { id: 'CSAF-PROD-003', severity: 'error', desc: 'Product references must exist in product_tree' },
+                
+                // --- Group References ---
+                { id: 'CSAF-GROUP-001', severity: 'error', desc: 'Group references must be defined' },
+                
+                // --- Vulnerability ---
+                { id: 'CSAF-VULN-001', severity: 'error', desc: 'Vulnerability MUST have cve OR ids (6.1.27.8)' },
+                { id: 'CSAF-VULN-002', severity: 'error', desc: 'Vulnerability MUST have product_status' },
+                
+                // --- VEX Status ---
+                { id: 'CSAF-STATUS-001', severity: 'error', desc: 'Must have at least one VEX status (6.1.27.7)' },
+                { id: 'CSAF-VEX-001', severity: 'error', desc: 'known_not_affected requires impact statement (6.1.27.9)' },
+                { id: 'CSAF-VEX-002', severity: 'error', desc: 'known_affected requires action statement (6.1.27.10)' },
+                
+                // --- Remediation Structure ---
+                { id: 'CSAF-REMED-001', severity: 'error', desc: 'Remediation MUST have category (6.1.29)' },
+                { id: 'CSAF-REMED-002', severity: 'error', desc: 'Remediation MUST have details OR url' },
+                { id: 'CSAF-REMED-003', severity: 'error', desc: 'Remediation MUST have product_ids OR group_ids (6.1.29)' },
+                
+                // --- Tracking (6.1.x) ---
+                { id: 'CSAF-TRACK-001', severity: 'error', desc: 'Revision history MUST be sorted ascending (6.1.14)' },
+                { id: 'CSAF-TRACK-002', severity: 'error', desc: 'Version 0.x.x MUST have status draft (6.1.17)' },
+                
+                // ================================================================================
+                // Recommended Tests (SHOULD - warnings)
+                // ================================================================================
+                
+                // --- Product Usage (6.2.1) ---
+                { id: 'CSAF-PROD-W001', severity: 'warning', desc: 'Unused Product ID - defined but never referenced (6.2.1)' },
+                
+                // --- VEX Completeness (6.2.2, 6.2.3) ---
+                { id: 'CSAF-VEX-W001', severity: 'warning', desc: 'Missing Remediation for affected products (6.2.2)' },
+                { id: 'CSAF-VEX-W002', severity: 'warning', desc: 'Missing Metric (CVSS/SSVC) for affected products (6.2.3)' },
+                { id: 'CSAF-VEX-W003', severity: 'warning', desc: 'VEX SHOULD include notes for each vulnerability' },
+                { id: 'CSAF-VEX-W004', severity: 'warning', desc: 'Discouraged Product Status Remediation Combination (6.2.27)' },
+                { id: 'CSAF-VEX-W005', severity: 'warning', desc: 'CVSS for Fixed Products - environmental score should be 0 (6.2.19)' },
+                
+                // --- Revision History (6.2.4~6) ---
+                { id: 'CSAF-TRACK-W001', severity: 'warning', desc: 'Build Metadata in Revision History - + in version (6.2.4)' },
+                { id: 'CSAF-TRACK-W002', severity: 'warning', desc: 'Initial Release Date older than first revision (6.2.5)' },
+                { id: 'CSAF-TRACK-W003', severity: 'warning', desc: 'Current Release Date older than last revision (6.2.6)' },
+                { id: 'CSAF-TRACK-W004', severity: 'warning', desc: 'Same Timestamps in Revision History (6.2.21)' },
+                { id: 'CSAF-TRACK-W005', severity: 'warning', desc: 'Document Tracking ID in Title (6.2.22)' },
+                { id: 'CSAF-TRACK-W006', severity: 'warning', desc: 'Disclosure Date newer than Revision History (6.2.33)' },
+                
+                // --- Involvements (6.2.7) ---
+                { id: 'CSAF-INVOLVE-W001', severity: 'warning', desc: 'Missing Date in Involvements (6.2.7)' },
+                
+                // --- Hash Algorithm (6.2.8~9) ---
+                { id: 'CSAF-HASH-W001', severity: 'warning', desc: 'MD5 as only Hash Algorithm - weak (6.2.8)' },
+                { id: 'CSAF-HASH-W002', severity: 'warning', desc: 'SHA-1 as only Hash Algorithm - weak (6.2.9)' },
+                
+                // --- Document Quality (6.2.11~18) ---
+                { id: 'CSAF-DOC-W001', severity: 'warning', desc: 'Missing Canonical URL - self reference (6.2.11)' },
+                { id: 'CSAF-DOC-W002', severity: 'warning', desc: 'Missing Document Language (6.2.12)' },
+                { id: 'CSAF-DOC-W003', severity: 'warning', desc: 'Missing Product Identification Helper (6.2.16)' },
+                { id: 'CSAF-DOC-W004', severity: 'warning', desc: 'CVE in field IDs - should be in cve field (6.2.17)' },
+                { id: 'CSAF-DOC-W005', severity: 'warning', desc: 'Product Version Range without vers format (6.2.18)' },
+                
+                // --- UUID Usage (6.2.28~30) ---
+                { id: 'CSAF-UUID-W001', severity: 'warning', desc: 'Usage of Max UUID (6.2.28)' },
+                { id: 'CSAF-UUID-W002', severity: 'warning', desc: 'Usage of Nil UUID (6.2.29)' },
+                { id: 'CSAF-UUID-W003', severity: 'warning', desc: 'Usage of Sharing Group on TLP:CLEAR (6.2.30)' },
+                
+                // --- SSVC (6.2.34~38) ---
+                { id: 'CSAF-SSVC-W001', severity: 'warning', desc: 'Unregistered SSVC Decision Point Namespace (6.2.34)' },
+                { id: 'CSAF-SSVC-W002', severity: 'warning', desc: 'Private SSVC Namespace in TLP:CLEAR (6.2.35)' },
+                { id: 'CSAF-SSVC-W003', severity: 'warning', desc: 'Unknown SSVC Role (6.2.37)' },
+                
+                // --- Profile (6.2.38, 6.2.41) ---
+                { id: 'CSAF-PROFILE-W001', severity: 'warning', desc: 'Usage of Deprecated Profile (6.2.38)' },
+                { id: 'CSAF-EPSS-W001', severity: 'warning', desc: 'Old EPSS Timestamp - more than 15 days (6.2.41)' }
+            ]
+        };
+
+        // ============ STATE VARIABLES ============
+        let validatorFile = null;
+        let validatorData = null;
+        let validatorDetectedType = null;
+
+        let converterFile = null;
+        let converterData = null;
+        let converterSourceType = null;
+        let converterTargetType = null;
+        let convertedResult = null;
+
+        // ============ DOM ELEMENTS ============
+        const validatorUploadArea = document.getElementById('validatorUploadArea');
+        const validatorFileInput = document.getElementById('validatorFileInput');
+        const validatorFileInfo = document.getElementById('validatorFileInfo');
+        const validateBtn = document.getElementById('validateBtn');
+        const validatorClearBtn = document.getElementById('validatorClearBtn');
+
+        const converterUploadArea = document.getElementById('converterUploadArea');
+        const converterFileInput = document.getElementById('converterFileInput');
+        const converterFileInfo = document.getElementById('converterFileInfo');
+        const convertBtn = document.getElementById('convertBtn');
+        const converterClearBtn = document.getElementById('converterClearBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        // ============ TAB SWITCHING ============
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        // ============ UTILITY FUNCTIONS ============
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' bytes';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function detectFormat(data) {
+            if (data['@context'] && String(data['@context']).includes('openvex')) return 'openvex';
+            if (data.statements) return 'openvex';
+            if (data.document && data.document.tracking) return 'csaf';
+            if (data.bomFormat === 'CycloneDX') return 'cyclonedx';
+            if (data.specVersion && data.components) return 'cyclonedx';
+            return 'unknown';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ============ UPDATE MAPPING TOOLTIPS ============
+        // 손실 필드 분석 결과 저장
+        let lossAnalysis = null;
+
+        // 파일 업로드 시 손실 필드 분석 API 호출 (실제 변환 수행)
+        async function analyzeLossFields() {
+            if (!converterData) return;
+            
+            try {
+                const response = await fetch('/api/analyze-loss', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: converterData })
+                });
+                
+                const result = await response.json();
+                if (result.success && result.analysis) {
+                    lossAnalysis = result.analysis;
+                    updateMappingTooltips();
+                } else {
+                    console.error('Analysis failed:', result.error);
+                }
+            } catch (e) {
+                console.error('Error analyzing loss fields:', e);
+            }
+        }
+
+        function updateMappingTooltips() {
+            if (!converterSourceType || !converterData) return;
+            
+            const targets = ['openvex', 'csaf', 'cyclonedx', 'vdr'];
+            
+            targets.forEach(target => {
+                const tooltip = document.getElementById('tooltip' + target.charAt(0).toUpperCase() + target.slice(1));
+                if (!tooltip) return;
+                
+                // 같은 형식이면 N/A
+                if (converterSourceType === target) {
+                    tooltip.innerHTML = '<p style="color: #999; text-align: center;">N/A (Same format)</p>';
+                    return;
+                }
+                
+                // 분석 결과가 없으면 로딩 표시
+                if (!lossAnalysis) {
+                    tooltip.innerHTML = '<p style="color: #999; text-align: center;">Analyzing...</p>';
+                    return;
+                }
+                
+                // 분석 에러가 있으면 표시
+                if (lossAnalysis.error) {
+                    tooltip.innerHTML = `<p style="color: #ef9a9a; text-align: center;">${lossAnalysis.error}</p>`;
+                    return;
+                }
+                
+                let html = `<h4>${converterSourceType.toUpperCase()} &#8594; CIM</h4>`;
+                
+                // 통계 표시
+                html += `<div style="color: #90caf9; font-size: 10px; margin-bottom: 8px;">`;
+                html += `Values: ${lossAnalysis.total_values || 0} | `;
+                html += `Mapped: ${lossAnalysis.mapped_count || 0} | `;
+                html += `<span style="color: #ef9a9a;">Unmapped: ${lossAnalysis.unmapped_count || 0}</span>`;
+                html += `</div>`;
+                
+                const unmappedFields = lossAnalysis.unmapped_fields || [];
+                
+                if (unmappedFields.length > 0) {
+                    html += '<div class="lost-section" style="margin-top: 0; padding-top: 0; border-top: none;">';
+                    html += '<h5 style="color: #ef9a9a; margin-bottom: 8px;">Fields NOT mapped to CIM:</h5>';
+                    
+                    // 최대 8개만 표시
+                    const displayFields = unmappedFields.slice(0, 8);
+                    displayFields.forEach(item => {
+                        const path = item.path || item;
+                        const value = item.value ? ` = "${item.value.substring(0, 30)}${item.value.length > 30 ? '...' : ''}"` : '';
+                        html += `<div class="lost-item" style="margin-bottom: 3px; font-size: 10px;">&#8226; ${path}${value}</div>`;
+                    });
+                    
+                    if (unmappedFields.length > 8) {
+                        html += `<div style="color: #999; font-size: 9px; margin-top: 4px;">+ ${unmappedFields.length - 8} more fields...</div>`;
+                    }
+                    html += '</div>';
+                } else {
+                    html += '<p style="color: #a5d6a7; font-size: 11px;">All values are mapped to CIM.</p>';
+                }
+                
+                // VDR 추가 필드 표시
+                if (target === 'vdr') {
+                    html += '<div class="added-section" style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #5d4037;">';
+                    html += '<h5 style="color: #a5d6a7; margin-bottom: 6px;">VDR fields added:</h5>';
+                    html += '<div class="added-item" style="color: #a5d6a7; font-size: 10px;">+ workaround</div>';
+                    html += '<div class="added-item" style="color: #a5d6a7; font-size: 10px;">+ proofOfConcept</div>';
+                    html += '<div class="added-item" style="color: #a5d6a7; font-size: 10px;">+ credits</div>';
+                    html += '</div>';
+                }
+                
+                tooltip.innerHTML = html;
+            });
+        }
+
+        // ============ VALIDATOR FUNCTIONS ============
+        validatorUploadArea.addEventListener('click', () => validatorFileInput.click());
+        validatorUploadArea.addEventListener('dragover', e => {
+            e.preventDefault();
+            validatorUploadArea.classList.add('drag-over');
+        });
+        validatorUploadArea.addEventListener('dragleave', () => {
+            validatorUploadArea.classList.remove('drag-over');
+        });
+        validatorUploadArea.addEventListener('drop', e => {
+            e.preventDefault();
+            validatorUploadArea.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) handleValidatorFile(e.dataTransfer.files[0]);
+        });
+        validatorFileInput.addEventListener('change', e => {
+            if (e.target.files.length > 0) handleValidatorFile(e.target.files[0]);
+        });
+        validatorClearBtn.addEventListener('click', resetValidator);
+
+        async function handleValidatorFile(file) {
+            if (!file.name.endsWith('.json')) {
+                alert('Please upload a JSON file');
+                return;
+            }
+
+            validatorFile = file;
+            document.getElementById('validatorFileName').textContent = file.name;
+            document.getElementById('validatorFileSize').textContent = formatFileSize(file.size);
+            validatorFileInfo.classList.add('show');
+
+            try {
+                const content = await file.text();
+                validatorData = JSON.parse(content);
+                validatorDetectedType = detectFormat(validatorData);
+                
+                // Update detected format display
+                document.querySelectorAll('#validator .format-card').forEach(card => {
+                    card.classList.remove('detected');
+                });
+                if (validatorDetectedType !== 'unknown') {
+                    document.getElementById('detect' + validatorDetectedType.charAt(0).toUpperCase() + validatorDetectedType.slice(1)).classList.add('detected');
+                }
+                
+                validateBtn.disabled = false;
+            } catch (error) {
+                alert('Invalid JSON file: ' + error.message);
+            }
+        }
+
+        function resetValidator() {
+            validatorFile = null;
+            validatorData = null;
+            validatorDetectedType = null;
+            validatorFileInput.value = '';
+            validatorFileInfo.classList.remove('show');
+            validateBtn.disabled = true;
+            document.getElementById('validatorResults').classList.remove('show');
+            document.querySelectorAll('#validator .format-card').forEach(card => {
+                card.classList.remove('detected');
+            });
+        }
+
+        validateBtn.addEventListener('click', async () => {
+            if (!validatorData) return;
+
+            const loading = document.getElementById('validatorLoading');
+            const results = document.getElementById('validatorResults');
+            
+            loading.classList.add('show');
+            results.classList.remove('show');
+
+            try {
+                const response = await fetch('/api/validate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: validatorData })
+                });
+
+                const result = await response.json();
+                loading.classList.remove('show');
+                displayValidationResults(result);
+                results.classList.add('show');
+            } catch (error) {
+                loading.classList.remove('show');
+                displayValidationError('Network error: ' + error.message);
+                results.classList.add('show');
+            }
+        });
+
+        function displayValidationResults(result) {
+            const statusElement = document.getElementById('resultStatus');
+            const iconElement = document.getElementById('statusIcon');
+            const textElement = document.getElementById('statusText');
+            const badgesElement = document.getElementById('validationBadges');
+            const contentElement = document.getElementById('resultContent');
+
+            if (!result.success) {
+                displayValidationError(result.error);
+                return;
+            }
+
+            const levels = result.validationLevels || {};
+            const errors = result.errors ? result.errors.filter(e => e.severity === 'error') : [];
+            const warnings = result.errors ? result.errors.filter(e => e.severity === 'warning') : [];
+
+            // Badges
+            let badgesHTML = `
+                <div class="validation-badge ${levels.schema ? 'pass' : 'fail'}">
+                    ${levels.schema ? '&#10003;' : '&#10007;'} Schema
+                </div>
+                <div class="validation-badge ${levels.vexRules ? 'pass' : 'fail'}">
+                    ${levels.vexRules ? '&#10003;' : '&#10007;'} VEX Rules
+                </div>
+            `;
+            if (warnings.length > 0) {
+                badgesHTML += `<div class="validation-badge warn">&#9888; Warnings (${warnings.length})</div>`;
+            }
+            badgesElement.innerHTML = badgesHTML;
+
+            if (result.isValid && warnings.length === 0) {
+                statusElement.className = 'result-status success';
+                iconElement.innerHTML = '&#10003;';
+                textElement.textContent = 'Validation Passed';
+                contentElement.innerHTML = `
+                    <div class="alert alert-success">
+                        <strong>Valid ${result.schemaType.toUpperCase()} Document</strong><br>
+                        No errors or warnings found.
+                    </div>
+                `;
+            } else if (result.isValid && warnings.length > 0) {
+                statusElement.className = 'result-status warning';
+                iconElement.innerHTML = '&#9888;';
+                textElement.textContent = 'Passed with Warnings';
+                let html = `<div class="alert alert-warning">Valid document with ${warnings.length} recommendation(s).</div>`;
+                html += renderErrors(warnings, 'Recommendations');
+                contentElement.innerHTML = html;
+            } else {
+                statusElement.className = 'result-status error';
+                iconElement.innerHTML = '&#10007;';
+                textElement.textContent = `Failed (${errors.length} error${errors.length > 1 ? 's' : ''})`;
+                let html = '';
+                if (errors.length > 0) html += renderErrors(errors, 'Errors');
+                if (warnings.length > 0) html += renderErrors(warnings, 'Warnings');
+                contentElement.innerHTML = html;
+            }
+        }
+
+        function renderErrors(items, title) {
+            let html = `<div class="error-section">
+                <div class="error-section-header">${title} (${items.length})</div>`;
+            items.forEach(err => {
+                const sev = err.severity || 'error';
+                html += `
+                    <div class="error-item severity-${sev}">
+                        <div class="error-header">
+                            <span class="error-rule-id">${escapeHtml(err.rule_id || 'UNKNOWN')}</span>
+                            <span class="error-severity-badge ${sev}">${sev === 'error' ? 'MUST' : 'SHOULD'}</span>
+                        </div>
+                        <div class="error-path">${escapeHtml(err.path || '/')}</div>
+                        <div class="error-message">${escapeHtml(err.message || '')}</div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            return html;
+        }
+
+        function displayValidationError(message) {
+            const statusElement = document.getElementById('resultStatus');
+            const iconElement = document.getElementById('statusIcon');
+            const textElement = document.getElementById('statusText');
+            const badgesElement = document.getElementById('validationBadges');
+            const contentElement = document.getElementById('resultContent');
+
+            statusElement.className = 'result-status error';
+            iconElement.innerHTML = '&#10007;';
+            textElement.textContent = 'Error';
+            badgesElement.innerHTML = '';
+            contentElement.innerHTML = `<div class="alert alert-error">${escapeHtml(message)}</div>`;
+        }
+
+        // ============ RULES REFERENCE ============
+        document.getElementById('showRulesBtn').addEventListener('click', () => {
+            document.getElementById('ruleReference').classList.add('show');
+        });
+        document.getElementById('hideRulesBtn').addEventListener('click', () => {
+            document.getElementById('ruleReference').classList.remove('show');
+        });
+
+        function initRulesDisplay() {
+            const container = document.getElementById('ruleCategories');
+            const formats = [
+                { key: 'openvex', title: 'OpenVEX' },
+                { key: 'cyclonedx', title: 'CycloneDX' },
+                { key: 'csaf', title: 'CSAF' }
+            ];
+
+            formats.forEach(format => {
+                const rules = validationRules[format.key];
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'rule-category';
+                categoryDiv.innerHTML = `
+                    <div class="rule-category-header">
+                        <div>
+                            <span class="rule-category-title">${format.title}</span>
+                            <span class="rule-category-count">${rules.length}</span>
+                        </div>
+                        <span class="rule-toggle-icon">&#9660;</span>
+                    </div>
+                    <div class="rule-list">
+                        ${rules.map(rule => `
+                            <div class="rule-item">
+                                <span class="rule-id">${rule.id}</span>
+                                <span class="rule-severity ${rule.severity}">${rule.severity === 'error' ? 'MUST' : 'SHOULD'}</span>
+                                <div class="rule-description">${rule.desc}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                categoryDiv.querySelector('.rule-category-header').addEventListener('click', () => {
+                    categoryDiv.classList.toggle('expanded');
+                });
+                container.appendChild(categoryDiv);
+            });
+        }
+        initRulesDisplay();
+
+        // ============ CONVERTER FUNCTIONS ============
+        converterUploadArea.addEventListener('click', () => converterFileInput.click());
+        converterUploadArea.addEventListener('dragover', e => {
+            e.preventDefault();
+            converterUploadArea.classList.add('drag-over');
+        });
+        converterUploadArea.addEventListener('dragleave', () => {
+            converterUploadArea.classList.remove('drag-over');
+        });
+        converterUploadArea.addEventListener('drop', e => {
+            e.preventDefault();
+            converterUploadArea.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) handleConverterFile(e.dataTransfer.files[0]);
+        });
+        converterFileInput.addEventListener('change', e => {
+            if (e.target.files.length > 0) handleConverterFile(e.target.files[0]);
+        });
+        converterClearBtn.addEventListener('click', resetConverter);
+
+        async function handleConverterFile(file) {
+            if (!file.name.endsWith('.json')) {
+                alert('Please upload a JSON file');
+                return;
+            }
+
+            converterFile = file;
+            document.getElementById('converterFileName').textContent = file.name;
+            document.getElementById('converterFileSize').textContent = formatFileSize(file.size);
+            converterFileInfo.classList.add('show');
+
+            try {
+                const content = await file.text();
+                converterData = JSON.parse(content);
+                converterSourceType = detectFormat(converterData);
+                
+                // Update source format display
+                document.querySelectorAll('[id^="src"]').forEach(card => {
+                    card.classList.remove('detected');
+                });
+                if (converterSourceType !== 'unknown') {
+                    const srcElement = document.getElementById('src' + converterSourceType.charAt(0).toUpperCase() + converterSourceType.slice(1));
+                    if (srcElement) {
+                        srcElement.classList.add('detected');
+                    }
+                }
+                
+                updateConvertButton();
+            } catch (error) {
+                alert('Invalid JSON file: ' + error.message);
+                return;
+            }
+            
+            // Reset loss analysis and call API for dynamic analysis
+            lossAnalysis = null;
+            updateMappingTooltips(); // Show "Analyzing..." first
+            await analyzeLossFields(); // Then update with actual results
+        }
+
+        function resetConverter() {
+            converterFile = null;
+            converterData = null;
+            converterSourceType = null;
+            converterTargetType = null;
+            lossAnalysis = null;
+            converterFileInput.value = '';
+            converterFileInfo.classList.remove('show');
+            convertBtn.disabled = true;
+            document.getElementById('converterResults').classList.remove('show');
+            document.querySelectorAll('[id^="src"], [id^="tgt"]').forEach(card => {
+                card.classList.remove('detected', 'selected');
+            });
+        }
+
+        // Target format selection
+        document.querySelectorAll('[data-target]').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('[data-target]').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                converterTargetType = card.dataset.target;
+                updateConvertButton();
+            });
+        });
+
+        function updateConvertButton() {
+            convertBtn.disabled = !(converterData && converterSourceType && converterTargetType && converterSourceType !== converterTargetType);
+        }
+
+        convertBtn.addEventListener('click', async () => {
+            if (!converterData || !converterTargetType) return;
+
+            const loading = document.getElementById('converterLoading');
+            const results = document.getElementById('converterResults');
+            
+            loading.classList.add('show');
+            results.classList.remove('show');
+
+            try {
+                const response = await fetch('/api/convert', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        content: converterData,
+                        targetFormat: converterTargetType,
+                        options: {
+                            reversible: document.getElementById('optReversible').checked,
+                            restore: document.getElementById('optRestore').checked
+                        }
+                    })
+                });
+
+                const result = await response.json();
+                loading.classList.remove('show');
+
+                if (result.success) {
+                    convertedResult = result.result;
+                    displayConversionResults(result);
+                    results.classList.add('show');
+                } else {
+                    alert('Conversion failed: ' + result.error);
+                }
+            } catch (error) {
+                loading.classList.remove('show');
+                alert('Network error: ' + error.message);
+            }
+        });
+
+        function displayConversionResults(result) {
+            document.getElementById('convSrcFormat').textContent = result.conversionInfo.sourceFormat.toUpperCase();
+            document.getElementById('convTgtFormat').textContent = result.conversionInfo.targetFormat.toUpperCase();
+            document.getElementById('convTimestamp').textContent = result.conversionInfo.timestamp;
+            document.getElementById('convertedJson').textContent = JSON.stringify(result.result, null, 2);
+
+            // Display dynamic loss analysis
+            const lossAnalysis = result.conversionInfo.lossAnalysis || {};
+            const mappingGrid = document.getElementById('mappingGrid');
+            const lostInfo = document.getElementById('lostInfo');
+            const lostList = document.getElementById('lostList');
+
+            // Display statistics
+            let gridHtml = '<div class="mapping-row header"><span class="source-col">Analysis</span><span class="arrow-col"></span><span class="target-col">Result</span></div>';
+            gridHtml += `<div class="mapping-row"><span class="source-col">Total Values</span><span class="arrow-col">:</span><span class="target-col">${lossAnalysis.total_values || 'N/A'}</span></div>`;
+            gridHtml += `<div class="mapping-row"><span class="source-col">Mapped to CIM</span><span class="arrow-col">:</span><span class="target-col" style="color: #2e7d32;">${lossAnalysis.mapped_count || 'N/A'}</span></div>`;
+            gridHtml += `<div class="mapping-row"><span class="source-col">Not Mapped</span><span class="arrow-col">:</span><span class="target-col" style="color: #c62828;">${lossAnalysis.unmapped_count || 'N/A'}</span></div>`;
+            mappingGrid.innerHTML = gridHtml;
+
+            // Display unmapped fields
+            const unmappedFields = lossAnalysis.unmapped_fields || [];
+            if (unmappedFields.length > 0) {
+                lostInfo.style.display = 'block';
+                lostList.innerHTML = unmappedFields.slice(0, 15).map(item => {
+                    const path = item.path || item;
+                    const value = item.value ? ` = "${item.value.substring(0, 50)}${item.value.length > 50 ? '...' : ''}"` : '';
+                    return `<li><strong>${path}</strong>${value}</li>`;
+                }).join('');
+                if (unmappedFields.length > 15) {
+                    lostList.innerHTML += `<li style="color: #999;">+ ${unmappedFields.length - 15} more fields...</li>`;
+                }
+            } else {
+                lostInfo.style.display = 'none';
+            }
+        }
+
+        downloadBtn.addEventListener('click', async () => {
+            if (!convertedResult) return;
+            
+            try {
+                const response = await fetch('/api/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        content: convertedResult,
+                        sourceFormat: converterSourceType,
+                        targetFormat: converterTargetType
+                    })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = 'converted.json';
+                    if (contentDisposition) {
+                        const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                        if (match && match[1]) {
+                            filename = match[1].replace(/['"]/g, '');
+                        }
+                    }
+                    
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    const error = await response.json();
+                    alert('Download failed: ' + (error.error || 'Unknown error'));
+                }
+            } catch (e) {
+                alert('Download error: ' + e.message);
+            }
+        });
+    </script>
+</body>
+</html>
