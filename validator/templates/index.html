@@ -5,6 +5,156 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VEXCO 1.0</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* 더 보기/접기 버튼 */
+        .show-all-btn {
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: #8b4513;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        .show-all-btn:hover {
+            background: #6b3620;
+        }
+        
+        /* 손실 필드 목록 */
+        #lostList {
+            max-height: none;
+            transition: max-height 0.3s ease;
+        }
+        
+        #lostList li {
+            margin-bottom: 6px;
+            line-height: 1.4;
+            word-break: break-all;
+        }
+        
+        #lostList li strong {
+            color: #6b3620;
+        }
+        
+        /* 필드 매핑 뷰어 */
+        #fieldMappingsReference {
+            display: none;
+        }
+        #fieldMappingsReference.show {
+            display: block;
+        }
+        
+        .conversion-path {
+            background: #f5ebe0;
+            color: #6b3620;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 1px solid #d4c4b0;
+        }
+        
+        .mapping-section {
+            margin-bottom: 20px;
+            border: 1px solid #d4c4b0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .mapping-section h4 {
+            background: #f5ebe0;
+            margin: 0;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: #6b3620;
+            border-bottom: 1px solid #d4c4b0;
+        }
+        
+        .mapping-table-detail {
+            padding: 0;
+        }
+        
+        .mapping-row-detail {
+            display: grid;
+            grid-template-columns: 1fr 30px 1fr;
+            padding: 10px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+            align-items: center;
+        }
+        
+        /* 4열 그리드 (런타임 매핑용) */
+        .mapping-row-detail.runtime {
+            grid-template-columns: 1.2fr 30px 1fr 80px;
+        }
+        
+        .mapping-row-detail:last-child {
+            border-bottom: none;
+        }
+        
+        .mapping-row-detail:hover {
+            background: #fafafa;
+        }
+        
+        .mapping-row-detail.header {
+            background: #f9f9f9;
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .mapping-row-detail .source-field {
+            color: #1565c0;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            word-break: break-all;
+        }
+        
+        .mapping-row-detail .arrow {
+            text-align: center;
+            color: #999;
+        }
+        
+        .mapping-row-detail .target-field {
+            color: #2e7d32;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            word-break: break-all;
+        }
+        
+        .value-mapping-row {
+            display: grid;
+            grid-template-columns: 1fr 30px 1fr;
+            padding: 8px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+            align-items: center;
+        }
+        
+        .value-mapping-row:hover {
+            background: #fafafa;
+        }
+        
+        .value-mapping-row .source-val {
+            color: #1565c0;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        
+        .value-mapping-row .target-val {
+            color: #2e7d32;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        
+        .no-mapping {
+            padding: 16px;
+            color: #999;
+            text-align: center;
+            font-style: italic;
+        }
+    </style>
 </head>
 <body>
     <!-- Header -->
@@ -73,24 +223,24 @@
                 </div>
             </div>
 
-            <!-- Detected Format (VDR 제거됨 - Validator에서는 OpenVEX, CSAF, CycloneDX만) -->
+            <!-- Detected Format -->
             <div class="card">
                 <div class="card-title">Detected Format</div>
                 <div class="format-grid">
                     <div class="format-card" data-format="openvex" id="detectOpenvex">
                         <div class="format-icon">VEX</div>
                         <div class="format-name">OpenVEX</div>
-                        <span class="format-version">0.2.0</span>
+                        <span class="format-version">x</span>
                     </div>
                     <div class="format-card" data-format="csaf" id="detectCsaf">
                         <div class="format-icon">CSAF</div>
                         <div class="format-name">CSAF</div>
-                        <span class="format-version">2.1</span>
+                        <span class="format-version">x</span>
                     </div>
                     <div class="format-card" data-format="cyclonedx" id="detectCyclonedx">
                         <div class="format-icon">CDX</div>
                         <div class="format-name">CycloneDX</div>
-                        <span class="format-version">1.7</span>
+                        <span class="format-version">x</span>
                     </div>
                 </div>
             </div>
@@ -128,7 +278,7 @@
             <div class="card">
                 <div class="card-title">
                     Upload Source Document
-                    <span class="badge">v{{ converter_version }}</span>
+                    <span class="badge">JSON</span>
                 </div>
                 
                 {% if not converter_available %}
@@ -169,22 +319,22 @@
                     <div class="format-card" data-format="openvex" id="srcOpenvex">
                         <div class="format-icon">VEX</div>
                         <div class="format-name">OpenVEX</div>
-                        <span class="format-version">0.2.0</span>
+                        <span class="format-version">x</span>
                     </div>
                     <div class="format-card" data-format="csaf" id="srcCsaf">
                         <div class="format-icon">CSAF</div>
                         <div class="format-name">CSAF</div>
-                        <span class="format-version">2.1</span>
+                        <span class="format-version">x</span>
                     </div>
                     <div class="format-card" data-format="cyclonedx" id="srcCyclonedx">
                         <div class="format-icon">CDX</div>
                         <div class="format-name">CycloneDX</div>
-                        <span class="format-version">1.7</span>
+                        <span class="format-version">x</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Target Format (VDR 추가됨 - Converter에서만 VDR 선택 가능) -->
+            <!-- Target Format -->
             <div class="card">
                 <div class="card-title">Target Format</div>
                 <div class="format-grid" style="grid-template-columns: repeat(4, 1fr);">
@@ -229,7 +379,34 @@
                 </div>
 
                 <div class="button-group">
+                    <button class="btn btn-secondary" id="viewMappingsBtn" disabled title="Upload a file first to view field mappings">View Field Mappings</button>
                     <button class="btn btn-primary" id="convertBtn" disabled>Convert</button>
+                </div>
+            </div>
+
+            <!-- Field Mappings Reference (collapsible) -->
+            <div class="card rule-reference" id="fieldMappingsReference">
+                <div class="card-title">
+                    Field Mappings Reference
+                    <button class="btn btn-secondary" id="hideMappingsBtn" style="margin-left: auto; padding: 6px 12px;">Close</button>
+                </div>
+                <div id="mappingsContent">
+                    <div class="conversion-path" id="conversionPathDisplay"></div>
+                    
+                    <div class="mapping-section">
+                        <h4>Status Value Mappings</h4>
+                        <div id="statusMappingsTable" class="mapping-table-detail"></div>
+                    </div>
+                    
+                    <div class="mapping-section">
+                        <h4>Justification Value Mappings</h4>
+                        <div id="justMappingsTable" class="mapping-table-detail"></div>
+                    </div>
+                    
+                    <div class="mapping-section">
+                        <h4>Source → Target Field Mappings</h4>
+                        <div id="sourceToTargetTable" class="mapping-table-detail"></div>
+                    </div>
                 </div>
             </div>
 
@@ -265,15 +442,8 @@
                     </div>
                 </div>
                 
-                <!-- Field Mapping Display (레이아웃 수정) -->
-                <div class="field-mapping-section" id="fieldMappingSection">
-                    <h4>Field Mappings Applied</h4>
-                    <div class="mapping-table" id="mappingGrid"></div>
-                    <div class="lost-info" id="lostInfo" style="display: none;">
-                        <h5>Information Not Directly Mapped (stored in extension_data if reversible)</h5>
-                        <ul id="lostList"></ul>
-                    </div>
-                </div>
+                <!-- Field Mapping Display - 제거됨: View Field Mappings로 통합 -->
+                <!-- 이전 Field Mappings Applied 섹션은 View Field Mappings 버튼으로 접근 -->
             </div>
         </div>
     </div>
@@ -286,147 +456,255 @@
     </footer>
 
     <script>
-        // Field mappings storage
+        // 필드 매핑 저장소
         let fieldMappings = {};
+        
+        // 대상 형식별 분석 결과 저장
+        let analysisByTarget = {};
+        
+        // 미매핑 필드 및 확장 상태 저장
+        let currentUnmappedFields = [];
+        let isExpanded = false;
 
-        // Load field mappings on page load
+        // 페이지 로드 시 필드 매핑 로드 (선택사항, 비어있을 수 있음)
         fetch('/api/field-mappings')
             .then(r => r.json())
             .then(data => {
-                if (data.success) {
+                if (data.success && data.mappings) {
                     fieldMappings = data.mappings;
                 }
             })
-            .catch(e => console.error('Failed to load field mappings:', e));
+            .catch(e => {}); // 조용히 무시 - 변환 시 동적으로 매핑 로드됨
 
-        // ============ VALIDATION RULES DATABASE (MUST + SHOULD 포함) ============
+        // ============ 검증 규칙 데이터베이스 ============
         const validationRules = {
             openvex: [
-                { id: 'OVX-CTX-001', severity: 'error', desc: '@context must start with https://openvex.dev/ns/' },
-                { id: 'OVX-AUTHOR-001', severity: 'error', desc: 'author must not be empty (MUST)' },
-                // OpenVEX v0.2.0 Spec-based rules only
-                { id: 'OVX-CTX-001', severity: 'error', desc: '@context MUST start with https://openvex.dev/ns/ (MUST)' },
-                { id: 'OVX-ID-001', severity: 'error', desc: '@id MUST NOT be empty (MUST)' },
-                { id: 'OVX-VER-001', severity: 'error', desc: 'version MUST be >= 1 (MUST)' },
-                { id: 'OVX-TS-001', severity: 'error', desc: 'Document timestamp format validation (ISO 8601)' },
-                { id: 'OVX-TS-002', severity: 'error', desc: 'last_updated format validation (ISO 8601)' },
-                { id: 'OVX-TS-003', severity: 'error', desc: 'Statement timestamp format validation (ISO 8601)' },
-                { id: 'OVX-STATE-001', severity: 'error', desc: 'not_affected MUST include justification OR impact_statement (MUST)' },
-                { id: 'OVX-STATE-002', severity: 'error', desc: 'affected MUST include action_statement (MUST)' },
-                { id: 'OVX-STATUS-001', severity: 'error', desc: 'status MUST be one of: not_affected, affected, fixed, under_investigation (MUST)' },
-                { id: 'OVX-JUST-001', severity: 'error', desc: 'justification MUST be valid enum value (MUST)' },
-                { id: 'OVX-VULN-001', severity: 'error', desc: 'vulnerability MUST have name field (MUST)' },
-                { id: 'OVX-VULN-002', severity: 'error', desc: 'vulnerability name MUST NOT be empty (MUST)' },
-                { id: 'OVX-PROD-001', severity: 'error', desc: 'Product MUST have @id field (MUST)' },
-                { id: 'OVX-PROD-002', severity: 'error', desc: 'Product @id MUST NOT be empty (MUST)' }
+                // ================================================================================
+                // OpenVEX v0.2.0 검증 규칙
+                // https://github.com/openvex/spec/blob/main/OPENVEX-SPEC.md
+                // ================================================================================
+                
+                // --- JSON Schema 검증 (MUST) ---
+                { id: 'SCHEMA-OVX-001', severity: 'error', desc: '[MUST] JSON Schema validation failed' },
+                
+                // --- 문서 수준 필드 (MUST) ---
+                { id: 'OVX-CTX-001', severity: 'error', desc: '[MUST] @context MUST start with https://openvex.dev/ns/' },
+                { id: 'OVX-ID-001', severity: 'error', desc: '[MUST] @id MUST NOT be empty' },
+                { id: 'OVX-VER-001', severity: 'error', desc: '[MUST] version MUST be >= 1' },
+                
+                // --- Statement 필드 (MUST) ---
+                { id: 'OVX-STATE-001', severity: 'error', desc: '[MUST] not_affected requires justification OR impact_statement' },
+                { id: 'OVX-STATE-002', severity: 'error', desc: '[MUST] affected requires action_statement' },
+                { id: 'OVX-STATUS-001', severity: 'error', desc: '[MUST] status MUST be valid enum value' },
+                
+                // --- Vulnerability 필드 (MUST) ---
+                { id: 'OVX-VULN-001', severity: 'error', desc: '[MUST] vulnerability MUST have name field' },
+                { id: 'OVX-VULN-002', severity: 'error', desc: '[MUST] vulnerability name MUST NOT be empty' },
+                
+                // --- Product 필드 (MUST) ---
+                { id: 'OVX-PROD-001', severity: 'error', desc: '[MUST] Product MUST have @id field' },
+                { id: 'OVX-PROD-002', severity: 'error', desc: '[MUST] Product @id MUST NOT be empty' },
+                
+                // --- Subcomponent 필드 (MUST) ---
+                { id: 'OVX-SUB-001', severity: 'error', desc: '[MUST] subcomponent MUST have @id field' },
+                
+                // --- 중복 Justification (MUST) ---
+                { id: 'OVX-JUST-DUP-001', severity: 'error', desc: '[MUST] Same product cannot have multiple different justifications' },
+                
+                // --- 권장 사항 (SHOULD) ---
+                { id: 'OVX-TS-001', severity: 'warning', desc: '[SHOULD] timestamp SHOULD be valid ISO 8601 format' },
+                { id: 'OVX-TS-002', severity: 'warning', desc: '[SHOULD] last_updated SHOULD be valid ISO 8601 format' },
+                { id: 'OVX-TS-003', severity: 'warning', desc: '[SHOULD] statement timestamp SHOULD be valid ISO 8601 format' },
+                { id: 'OVX-SHOULD-001', severity: 'warning', desc: '[SHOULD] impact_statement recommended with justification' },
+                { id: 'OVX-SHOULD-002', severity: 'warning', desc: '[SHOULD] Product @id SHOULD use PURL format' },
+                { id: 'OVX-SHOULD-003', severity: 'warning', desc: '[SHOULD] subcomponent @id SHOULD use PURL format' }
             ],
             cyclonedx: [
-                // CycloneDX v1.7 Spec-based rules only
-                { id: 'CDX-FORMAT-001', severity: 'error', desc: 'bomFormat MUST be "CycloneDX" (MUST)' },
-                { id: 'CDX-VERSION-001', severity: 'error', desc: 'version MUST be >= 1 (MUST)' },
-                { id: 'CDX-BOMREF-DUP-001', severity: 'error', desc: 'All bom-ref values MUST be unique (MUST)' },
-                { id: 'CDX-STATE-VAL-001', severity: 'error', desc: 'analysis.state MUST be valid enum value (MUST)' },
-                { id: 'CDX-JUST-SHOULD-001', severity: 'warning', desc: 'not_affected SHOULD include justification (SHOULD)' },
-                { id: 'CDX-JUST-VAL-001', severity: 'error', desc: 'justification MUST be valid enum value (MUST)' },
-                { id: 'CDX-RESP-VAL-001', severity: 'error', desc: 'response MUST be valid enum value (MUST)' },
-                { id: 'CDX-REF-001', severity: 'error', desc: 'affects entry MUST have ref field (MUST)' },
-                { id: 'CDX-REF-002', severity: 'error', desc: 'affects.ref MUST NOT be empty (MUST)' },
-                { id: 'CDX-REF-003', severity: 'error', desc: 'affects.ref MUST point to existing bom-ref (MUST)' },
-                { id: 'CDX-VERSIONS-001', severity: 'error', desc: 'version entry MUST have version OR range (MUST)' },
-                { id: 'CDX-VERSIONS-002', severity: 'error', desc: 'version.status MUST be valid enum value (MUST)' },
-                { id: 'CDX-TS-001', severity: 'error', desc: 'firstIssued format validation (ISO 8601)' },
-                { id: 'CDX-TS-002', severity: 'error', desc: 'lastUpdated format validation (ISO 8601)' },
-                { id: 'CDX-DEPRECATED-001', severity: 'warning', desc: 'metadata.tools[] array format is deprecated - use tools object' }
+                // ================================================================================
+                // CycloneDX VEX 검증 규칙 v1.0
+                // v1.5, v1.6, v1.7 지원 (최소 v1.5 필수)
+                // https://cyclonedx.org/docs/
+                // ================================================================================
+                
+                // --- JSON Schema 검증 (MUST) ---
+                { id: 'SCHEMA-CDX-001', severity: 'error', desc: '[MUST] JSON Schema validation failed' },
+                
+                // --- 버전 지원 ---
+                { id: 'CDX-VERSION-UNSUPPORTED', severity: 'error', desc: 'CycloneDX v1.4 and below NOT supported - minimum v1.5 required' },
+                
+                // --- BOM 식별자 (SHOULD) ---
+                { id: 'CDX-BOM-001', severity: 'warning', desc: 'serialNumber SHOULD be present for document identification' },
+                { id: 'CDX-BOM-002', severity: 'warning', desc: 'serialNumber SHOULD be in URN UUID format' },
+                { id: 'CDX-BOM-003', severity: 'warning', desc: 'version SHOULD be >= 1' },
+                
+                // --- VEX 상태 로직 (MUST) ---
+                { id: 'CDX-VEX-001', severity: 'error', desc: '[MUST] not_affected status requires justification OR detail' },
+                { id: 'CDX-VEX-002', severity: 'error', desc: '[MUST] affected/exploitable status requires response OR detail' },
+                { id: 'CDX-VEX-003', severity: 'warning', desc: 'not_affected with justification SHOULD include detail' },
+                { id: 'CDX-VEX-004', severity: 'warning', desc: 'exploitable status SHOULD have response' },
+                { id: 'CDX-VEX-STATE-001', severity: 'error', desc: '[MUST] analysis.state is REQUIRED' },
+                { id: 'CDX-VEX-STATE-002', severity: 'error', desc: '[MUST] analysis.state MUST be valid enum value' },
+                { id: 'CDX-VEX-JUST-001', severity: 'error', desc: '[MUST] analysis.justification MUST be valid enum value' },
+                { id: 'CDX-VEX-RESP-001', severity: 'warning', desc: 'analysis.response SHOULD be valid enum values' },
+                { id: 'CDX-VEX-ANALYSIS', severity: 'error', desc: '[MUST] VEX vulnerability MUST have analysis section' },
+                { id: 'CDX-VEX-AFFECTS', severity: 'error', desc: '[MUST] vulnerability.affects is REQUIRED and MUST NOT be empty' },
+                
+                // --- 참조 무결성 (MUST/SHOULD) ---
+                { id: 'CDX-REF-001', severity: 'error', desc: '[MUST] Duplicate bom-ref values found' },
+                { id: 'CDX-REF-002', severity: 'warning', desc: 'bom-ref SHOULD NOT start with urn:cdx: (BOM-Link conflict)' },
+                { id: 'CDX-REF-003', severity: 'warning', desc: 'Component without type SHOULD be classified as "library"' },
+                { id: 'CDX-REF-004', severity: 'error', desc: '[MUST] affects[].ref is REQUIRED' },
+                { id: 'CDX-REF-005', severity: 'error', desc: '[MUST] affects[].ref MUST NOT be empty' },
+                { id: 'CDX-REF-006', severity: 'error', desc: '[MUST] affects[].ref must reference defined bom-ref' },
+                { id: 'CDX-REF-007', severity: 'error', desc: '[MUST] Product status disjointness - conflicting states' },
+                
+                // --- 타임스탬프 (MUST) ---
+                { id: 'CDX-TS-001', severity: 'error', desc: '[MUST] analysis.firstIssued is REQUIRED' },
+                { id: 'CDX-TS-002', severity: 'error', desc: '[MUST] firstIssued MUST be valid ISO 8601 format' },
+                { id: 'CDX-TS-003', severity: 'error', desc: '[MUST] analysis.lastUpdated is REQUIRED' },
+                { id: 'CDX-TS-004', severity: 'error', desc: '[MUST] lastUpdated MUST be valid ISO 8601 format' },
+                { id: 'CDX-TS-005', severity: 'error', desc: '[MUST] firstIssued cannot be later than lastUpdated' },
+                
+                // --- 취약점 식별자 (MUST) ---
+                { id: 'CDX-VULN-001', severity: 'error', desc: '[MUST] Vulnerability MUST have an id field' },
+                { id: 'CDX-VULN-002', severity: 'error', desc: '[MUST] Vulnerability id MUST NOT be empty' },
+                
+                // --- 버전 항목 ---
+                { id: 'CDX-VER-001', severity: 'error', desc: '[MUST] versions entry MUST have version OR range' },
+                { id: 'CDX-VER-002', severity: 'error', desc: '[MUST] version.status MUST be valid enum value' },
+                
+                // --- PURL/CPE 검증 ---
+                { id: 'CDX-PURL-001', severity: 'error', desc: '[MUST] PURL must match valid format (pkg:type/...)' },
+                { id: 'CDX-PURL-002', severity: 'warning', desc: 'PURL SHOULD have name component' },
+                { id: 'CDX-CPE-001', severity: 'error', desc: '[MUST] CPE must start with "cpe:"' },
+                
+                // --- v1.6+ 추가 규칙 ---
+                { id: 'CDX-V16-001', severity: 'warning', desc: '[v1.6+] vulnerability ratings SHOULD be provided' },
+                { id: 'CDX-V16-002', severity: 'warning', desc: '[v1.6+] evidence.identity SHOULD be an array' },
+                
+                // --- v1.7 전용 규칙 ---
+                { id: 'CDX-V17-001', severity: 'warning', desc: '[v1.7] machine-learning-model SHOULD have modelCard' },
+                { id: 'CDX-V17-002', severity: 'warning', desc: '[v1.7] data component SHOULD have data object' },
+                { id: 'CDX-V17-003', severity: 'error', desc: '[v1.7] Bundled (isExternal=false) MUST NOT have versionRange' },
+                { id: 'CDX-V17-004', severity: 'warning', desc: '[v1.7] TLP classification recommended' }
             ],
             csaf: [
                 // ================================================================================
-                // Mandatory Tests (MUST - errors)
+                // CSAF 2.0 검증 규칙 v2.0
+                // 명세서 Section 4 (Profiles), Section 6.1 (Mandatory Tests) 기반
+                // https://docs.oasis-open.org/csaf/csaf/v2.0/csaf-v2.0.html
                 // ================================================================================
                 
-                // --- Document Structure ---
-                { id: 'CSAF-DOC-001', severity: 'error', desc: 'VEX requires product_tree' },
-                { id: 'CSAF-DOC-002', severity: 'error', desc: 'product_tree must contain products' },
-                { id: 'CSAF-DOC-003', severity: 'error', desc: 'VEX requires vulnerabilities array' },
-                
-                // --- Product Definition (6.1.x) ---
-                { id: 'CSAF-PROD-001', severity: 'error', desc: 'Product IDs MUST be unique (6.1.2)' },
-                { id: 'CSAF-PROD-002', severity: 'error', desc: 'Product Group IDs MUST be unique (6.1.5)' },
-                { id: 'CSAF-PROD-003', severity: 'error', desc: 'Product references must exist in product_tree' },
-                
-                // --- Group References ---
-                { id: 'CSAF-GROUP-001', severity: 'error', desc: 'Group references must be defined' },
-                
-                // --- Vulnerability ---
-                { id: 'CSAF-VULN-001', severity: 'error', desc: 'Vulnerability MUST have cve OR ids (6.1.27.8)' },
-                { id: 'CSAF-VULN-002', severity: 'error', desc: 'Vulnerability MUST have product_status' },
-                
-                // --- VEX Status ---
-                { id: 'CSAF-STATUS-001', severity: 'error', desc: 'Must have at least one VEX status (6.1.27.7)' },
-                { id: 'CSAF-VEX-001', severity: 'error', desc: 'known_not_affected requires impact statement (6.1.27.9)' },
-                { id: 'CSAF-VEX-002', severity: 'error', desc: 'known_affected requires action statement (6.1.27.10)' },
-                
-                // --- Remediation Structure ---
-                { id: 'CSAF-REMED-001', severity: 'error', desc: 'Remediation MUST have category (6.1.29)' },
-                { id: 'CSAF-REMED-002', severity: 'error', desc: 'Remediation MUST have details OR url' },
-                { id: 'CSAF-REMED-003', severity: 'error', desc: 'Remediation MUST have product_ids OR group_ids (6.1.29)' },
-                
-                // --- Tracking (6.1.x) ---
-                { id: 'CSAF-TRACK-001', severity: 'error', desc: 'Revision history MUST be sorted ascending (6.1.14)' },
-                { id: 'CSAF-TRACK-002', severity: 'error', desc: 'Version 0.x.x MUST have status draft (6.1.17)' },
+                // --- JSON Schema 검증 ---
+                { id: 'SCHEMA-CSAF-001', severity: 'error', desc: '[Schema] JSON Schema validation failed' },
                 
                 // ================================================================================
-                // Recommended Tests (SHOULD - warnings)
+                // 4.1 CSAF Base 프로필 필수 필드
+                // ================================================================================
+                { id: 'CSAF-BASE-001', severity: 'error', desc: '[4.1] Required CSAF Base field is missing' },
+                { id: 'CSAF-BASE-002', severity: 'error', desc: '[4.1] revision_history is empty' },
+                { id: 'CSAF-BASE-003', severity: 'error', desc: '[4.1] revision_history item requires date' },
+                { id: 'CSAF-BASE-004', severity: 'error', desc: '[4.1] revision_history item requires number' },
+                { id: 'CSAF-BASE-005', severity: 'error', desc: '[4.1] revision_history item requires summary' },
+                
+                // ================================================================================
+                // 6.1 Mandatory Tests (일반)
                 // ================================================================================
                 
-                // --- Product Usage (6.2.1) ---
-                { id: 'CSAF-PROD-W001', severity: 'warning', desc: 'Unused Product ID - defined but never referenced (6.2.1)' },
+                // --- 6.1.1 Product ID 정의 누락 ---
+                { id: 'CSAF-6.1.1', severity: 'error', desc: '[6.1.1] Referenced Product ID not defined in product_tree' },
                 
-                // --- VEX Completeness (6.2.2, 6.2.3) ---
-                { id: 'CSAF-VEX-W001', severity: 'warning', desc: 'Missing Remediation for affected products (6.2.2)' },
-                { id: 'CSAF-VEX-W002', severity: 'warning', desc: 'Missing Metric (CVSS/SSVC) for affected products (6.2.3)' },
-                { id: 'CSAF-VEX-W003', severity: 'warning', desc: 'VEX SHOULD include notes for each vulnerability' },
-                { id: 'CSAF-VEX-W004', severity: 'warning', desc: 'Discouraged Product Status Remediation Combination (6.2.27)' },
-                { id: 'CSAF-VEX-W005', severity: 'warning', desc: 'CVSS for Fixed Products - environmental score should be 0 (6.2.19)' },
+                // --- 6.1.2 Product ID 중복 정의 ---
+                { id: 'CSAF-6.1.2', severity: 'error', desc: '[6.1.2] Duplicate Product ID definition' },
                 
-                // --- Revision History (6.2.4~6) ---
-                { id: 'CSAF-TRACK-W001', severity: 'warning', desc: 'Build Metadata in Revision History - + in version (6.2.4)' },
-                { id: 'CSAF-TRACK-W002', severity: 'warning', desc: 'Initial Release Date older than first revision (6.2.5)' },
-                { id: 'CSAF-TRACK-W003', severity: 'warning', desc: 'Current Release Date older than last revision (6.2.6)' },
-                { id: 'CSAF-TRACK-W004', severity: 'warning', desc: 'Same Timestamps in Revision History (6.2.21)' },
-                { id: 'CSAF-TRACK-W005', severity: 'warning', desc: 'Document Tracking ID in Title (6.2.22)' },
-                { id: 'CSAF-TRACK-W006', severity: 'warning', desc: 'Disclosure Date newer than Revision History (6.2.33)' },
+                // --- 6.1.3 Product ID 순환 참조 ---
+                { id: 'CSAF-6.1.3', severity: 'error', desc: '[6.1.3] Circular Product ID reference in relationships' },
                 
-                // --- Involvements (6.2.7) ---
-                { id: 'CSAF-INVOLVE-W001', severity: 'warning', desc: 'Missing Date in Involvements (6.2.7)' },
+                // --- 6.1.4 Product Group ID 정의 누락 ---
+                { id: 'CSAF-6.1.4', severity: 'error', desc: '[6.1.4] Referenced Product Group ID not defined' },
                 
-                // --- Hash Algorithm (6.2.8~9) ---
-                { id: 'CSAF-HASH-W001', severity: 'warning', desc: 'MD5 as only Hash Algorithm - weak (6.2.8)' },
-                { id: 'CSAF-HASH-W002', severity: 'warning', desc: 'SHA-1 as only Hash Algorithm - weak (6.2.9)' },
+                // --- 6.1.5 Product Group ID 중복 정의 ---
+                { id: 'CSAF-6.1.5', severity: 'error', desc: '[6.1.5] Duplicate Product Group ID definition' },
                 
-                // --- Document Quality (6.2.11~18) ---
-                { id: 'CSAF-DOC-W001', severity: 'warning', desc: 'Missing Canonical URL - self reference (6.2.11)' },
-                { id: 'CSAF-DOC-W002', severity: 'warning', desc: 'Missing Document Language (6.2.12)' },
-                { id: 'CSAF-DOC-W003', severity: 'warning', desc: 'Missing Product Identification Helper (6.2.16)' },
-                { id: 'CSAF-DOC-W004', severity: 'warning', desc: 'CVE in field IDs - should be in cve field (6.2.17)' },
-                { id: 'CSAF-DOC-W005', severity: 'warning', desc: 'Product Version Range without vers format (6.2.18)' },
+                // --- 6.1.6 모순되는 Product Status ---
+                { id: 'CSAF-6.1.6', severity: 'error', desc: '[6.1.6] Product in contradicting status groups' },
                 
-                // --- UUID Usage (6.2.28~30) ---
-                { id: 'CSAF-UUID-W001', severity: 'warning', desc: 'Usage of Max UUID (6.2.28)' },
-                { id: 'CSAF-UUID-W002', severity: 'warning', desc: 'Usage of Nil UUID (6.2.29)' },
-                { id: 'CSAF-UUID-W003', severity: 'warning', desc: 'Usage of Sharing Group on TLP:CLEAR (6.2.30)' },
+                // --- 6.1.7 동일 CVSS 버전 점수 중복 ---
+                { id: 'CSAF-6.1.7', severity: 'error', desc: '[6.1.7] Multiple scores with same CVSS version per product' },
                 
-                // --- SSVC (6.2.34~38) ---
-                { id: 'CSAF-SSVC-W001', severity: 'warning', desc: 'Unregistered SSVC Decision Point Namespace (6.2.34)' },
-                { id: 'CSAF-SSVC-W002', severity: 'warning', desc: 'Private SSVC Namespace in TLP:CLEAR (6.2.35)' },
-                { id: 'CSAF-SSVC-W003', severity: 'warning', desc: 'Unknown SSVC Role (6.2.37)' },
+                // --- 6.1.11 CWE 검증 ---
+                { id: 'CSAF-6.1.11', severity: 'error', desc: '[6.1.11] Invalid CWE ID format' },
                 
-                // --- Profile (6.2.38, 6.2.41) ---
-                { id: 'CSAF-PROFILE-W001', severity: 'warning', desc: 'Usage of Deprecated Profile (6.2.38)' },
-                { id: 'CSAF-EPSS-W001', severity: 'warning', desc: 'Old EPSS Timestamp - more than 15 days (6.2.41)' }
+                // --- 6.1.13 PURL 검증 ---
+                { id: 'CSAF-6.1.13', severity: 'error', desc: '[6.1.13] Invalid PURL format' },
+                
+                // --- 6.1.14 revision_history 정렬 ---
+                { id: 'CSAF-6.1.14', severity: 'error', desc: '[6.1.14] Revision history version order mismatch' },
+                
+                // --- 6.1.15 Translator ---
+                { id: 'CSAF-6.1.15', severity: 'error', desc: '[6.1.15] source_lang required when publisher.category is translator' },
+                
+                // --- 6.1.16 최신 문서 버전 ---
+                { id: 'CSAF-6.1.16', severity: 'error', desc: '[6.1.16] Document version does not match latest revision' },
+                
+                // --- 6.1.21 revision_history 버전 누락 ---
+                { id: 'CSAF-6.1.21', severity: 'error', desc: '[6.1.21] Missing version number in revision history' },
+                
+                // --- 6.1.22 revision_history 버전 중복 ---
+                { id: 'CSAF-6.1.22', severity: 'error', desc: '[6.1.22] Duplicate version number in revision history' },
+                
+                // --- 6.1.23 동일 CVE 중복 사용 ---
+                { id: 'CSAF-6.1.23', severity: 'error', desc: '[6.1.23] Same CVE used in multiple vulnerability items' },
+                
+                // --- 6.1.26 금지된 category 이름 ---
+                { id: 'CSAF-6.1.26', severity: 'error', desc: '[6.1.26] Prohibited document category name' },
+                
+                // --- 6.1.29 Remediation에 제품 참조 없음 ---
+                { id: 'CSAF-6.1.29', severity: 'error', desc: '[6.1.29] Remediation without product_ids or group_ids' },
+                
+                // --- 6.1.30 정수/시맨틱 버전 혼용 ---
+                { id: 'CSAF-6.1.30', severity: 'error', desc: '[6.1.30] Mixed integer and semantic versioning' },
+                
+                // --- 6.1.31 product_version에 버전 범위 ---
+                { id: 'CSAF-6.1.31', severity: 'error', desc: '[6.1.31] Version range in product_version branch name' },
+                
+                // --- 6.1.32 Flag에 제품 참조 없음 ---
+                { id: 'CSAF-6.1.32', severity: 'error', desc: '[6.1.32] Flag without product_ids or group_ids' },
+                
+                // --- 6.1.33 VEX justification 플래그 중복 ---
+                { id: 'CSAF-6.1.33', severity: 'error', desc: '[6.1.33] Multiple VEX justification flags per product' },
+                
+                // ================================================================================
+                // 6.1.27 VEX 프로필 전용 Tests (csaf_vex 카테고리일 때만)
+                // ================================================================================
+                
+                // --- 6.1.27.4 Product Tree ---
+                { id: 'CSAF-VEX-PT-001', severity: 'error', desc: '[6.1.27.4] VEX profile requires product_tree' },
+                
+                // --- 6.1.27.5 Vulnerability Notes ---
+                { id: 'CSAF-VEX-NOTES-001', severity: 'error', desc: '[6.1.27.5] VEX profile requires vulnerability notes' },
+                
+                // --- 6.1.27.7 VEX Product Status ---
+                { id: 'CSAF-VEX-STATUS-001', severity: 'error', desc: '[6.1.27.7] VEX requires fixed/known_affected/known_not_affected/under_investigation' },
+                
+                // --- 6.1.27.8 Vulnerability ID ---
+                { id: 'CSAF-VEX-ID-001', severity: 'error', desc: '[6.1.27.8] VEX requires cve or ids' },
+                
+                // --- 6.1.27.9 Impact Statement ---
+                { id: 'CSAF-VEX-IMPACT-001', severity: 'error', desc: '[6.1.27.9] known_not_affected product requires impact statement' },
+                
+                // --- 6.1.27.10 Action Statement ---
+                { id: 'CSAF-VEX-ACTION-001', severity: 'error', desc: '[6.1.27.10] known_affected product requires action statement (remediation)' },
+                
+                // --- 6.1.27.11 Vulnerabilities ---
+                { id: 'CSAF-VEX-VULN-001', severity: 'error', desc: '[6.1.27.11] VEX profile requires vulnerabilities' },
+                
+                // --- 프로필 정보 ---
+                { id: 'CSAF-PROFILE-INFO', severity: 'info', desc: 'Non-VEX category - validated against CSAF Base profile' }
             ]
         };
 
-        // ============ STATE VARIABLES ============
+        // ============ 상태 변수 ============
         let validatorFile = null;
         let validatorData = null;
         let validatorDetectedType = null;
@@ -437,7 +715,7 @@
         let converterTargetType = null;
         let convertedResult = null;
 
-        // ============ DOM ELEMENTS ============
+        // ============ DOM 요소 ============
         const validatorUploadArea = document.getElementById('validatorUploadArea');
         const validatorFileInput = document.getElementById('validatorFileInput');
         const validatorFileInfo = document.getElementById('validatorFileInfo');
@@ -451,7 +729,7 @@
         const converterClearBtn = document.getElementById('converterClearBtn');
         const downloadBtn = document.getElementById('downloadBtn');
 
-        // ============ TAB SWITCHING ============
+        // ============ 탭 전환 ============
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -462,7 +740,7 @@
             });
         });
 
-        // ============ UTILITY FUNCTIONS ============
+        // ============ 유틸리티 함수 ============
         function formatFileSize(bytes) {
             if (bytes < 1024) return bytes + ' bytes';
             if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
@@ -478,30 +756,86 @@
             return 'unknown';
         }
 
+        function detectVersion(data, format) {
+            if (format === 'openvex') {
+                // OpenVEX uses @context for version
+                const context = data['@context'] || '';
+                if (context.includes('0.2')) return '0.2.0';
+                if (context.includes('0.1')) return '0.1.0';
+                return 'x';
+            }
+            if (format === 'csaf') {
+                const doc = data.document || {};
+                const csafVersion = doc.csaf_version || '';
+                if (csafVersion.startsWith('2.1')) return '2.1';
+                if (csafVersion.startsWith('2.0')) return '2.0';
+                // Fallback: check $schema
+                const schema = data['$schema'] || '';
+                if (schema.includes('2.1')) return '2.1';
+                if (schema.includes('2.0')) return '2.0';
+                return 'x';
+            }
+            if (format === 'cyclonedx') {
+                const specVersion = data.specVersion || '';
+                if (specVersion.startsWith('1.7')) return '1.7';
+                if (specVersion.startsWith('1.6')) return '1.6';
+                if (specVersion.startsWith('1.5')) return '1.5';
+                if (specVersion.startsWith('1.4')) return '1.4';
+                return 'x';
+            }
+            return 'x';
+        }
+
+        function updateFormatVersion(containerId, format, version) {
+            const formatMap = {
+                'openvex': 'Openvex',
+                'csaf': 'Csaf',
+                'cyclonedx': 'Cyclonedx'
+            };
+            const cardId = containerId + formatMap[format];
+            const card = document.getElementById(cardId);
+            if (card) {
+                const versionSpan = card.querySelector('.format-version');
+                if (versionSpan) {
+                    versionSpan.textContent = version;
+                }
+            }
+        }
+
+        function resetFormatVersions(containerPrefix) {
+            const defaults = {
+                'openvex': 'x',
+                'csaf': 'x',
+                'cyclonedx': 'x'
+            };
+            Object.keys(defaults).forEach(format => {
+                updateFormatVersion(containerPrefix, format, defaults[format]);
+            });
+        }
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        // ============ UPDATE MAPPING TOOLTIPS ============
-        // 손실 필드 분석 결과 저장
-        let lossAnalysis = null;
-
-        // 파일 업로드 시 손실 필드 분석 API 호출 (실제 변환 수행)
-        async function analyzeLossFields() {
+        // ============ 모든 대상 형식에 대한 손실 필드 분석 ============
+        async function analyzeLossFieldsForAllTargets() {
             if (!converterData) return;
             
             try {
                 const response = await fetch('/api/analyze-loss', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content: converterData })
+                    body: JSON.stringify({ 
+                        content: converterData,
+                        analyzeAll: true  // Request analysis for all target formats
+                    })
                 });
                 
                 const result = await response.json();
-                if (result.success && result.analysis) {
-                    lossAnalysis = result.analysis;
+                if (result.success && result.analysisByTarget) {
+                    analysisByTarget = result.analysisByTarget;
                     updateMappingTooltips();
                 } else {
                     console.error('Analysis failed:', result.error);
@@ -520,40 +854,48 @@
                 const tooltip = document.getElementById('tooltip' + target.charAt(0).toUpperCase() + target.slice(1));
                 if (!tooltip) return;
                 
-                // 같은 형식이면 N/A
+                // 동일 형식 - N/A
                 if (converterSourceType === target) {
                     tooltip.innerHTML = '<p style="color: #999; text-align: center;">N/A (Same format)</p>';
                     return;
                 }
                 
-                // 분석 결과가 없으면 로딩 표시
-                if (!lossAnalysis) {
+                // 아직 분석 결과 없음
+                if (!analysisByTarget || !analysisByTarget[target]) {
                     tooltip.innerHTML = '<p style="color: #999; text-align: center;">Analyzing...</p>';
                     return;
                 }
                 
-                // 분석 에러가 있으면 표시
-                if (lossAnalysis.error) {
-                    tooltip.innerHTML = `<p style="color: #ef9a9a; text-align: center;">${lossAnalysis.error}</p>`;
+                const analysis = analysisByTarget[target];
+                
+                // 분석 오류
+                if (analysis.error) {
+                    tooltip.innerHTML = `<p style="color: #ef9a9a; text-align: center;">${analysis.error}</p>`;
                     return;
                 }
                 
-                let html = `<h4>${converterSourceType.toUpperCase()} &#8594; CIM</h4>`;
+                // 동일 형식 표시
+                if (analysis.same_format) {
+                    tooltip.innerHTML = '<p style="color: #999; text-align: center;">N/A (Same format)</p>';
+                    return;
+                }
                 
-                // 통계 표시
+                let html = `<h4>${converterSourceType.toUpperCase()} &#8594; ${target.toUpperCase()}</h4>`;
+                
+                // 통계
                 html += `<div style="color: #90caf9; font-size: 10px; margin-bottom: 8px;">`;
-                html += `Values: ${lossAnalysis.total_values || 0} | `;
-                html += `Mapped: ${lossAnalysis.mapped_count || 0} | `;
-                html += `<span style="color: #ef9a9a;">Unmapped: ${lossAnalysis.unmapped_count || 0}</span>`;
+                html += `Values: ${analysis.total_values || 0} | `;
+                html += `<span style="color: #a5d6a7;">Mapped: ${analysis.mapped_count || 0}</span> | `;
+                html += `<span style="color: #ef9a9a;">Not Mapped: ${analysis.unmapped_count || 0}</span>`;
                 html += `</div>`;
                 
-                const unmappedFields = lossAnalysis.unmapped_fields || [];
+                const unmappedFields = analysis.unmapped_fields || [];
                 
                 if (unmappedFields.length > 0) {
                     html += '<div class="lost-section" style="margin-top: 0; padding-top: 0; border-top: none;">';
-                    html += '<h5 style="color: #ef9a9a; margin-bottom: 8px;">Fields NOT mapped to CIM:</h5>';
+                    html += '<h5 style="color: #ef9a9a; margin-bottom: 8px;">Fields NOT in output:</h5>';
                     
-                    // 최대 8개만 표시
+                    // 최대 8개 필드 표시
                     const displayFields = unmappedFields.slice(0, 8);
                     displayFields.forEach(item => {
                         const path = item.path || item;
@@ -566,10 +908,10 @@
                     }
                     html += '</div>';
                 } else {
-                    html += '<p style="color: #a5d6a7; font-size: 11px;">All values are mapped to CIM.</p>';
+                    html += '<p style="color: #a5d6a7; font-size: 11px;">All values preserved in output.</p>';
                 }
                 
-                // VDR 추가 필드 표시
+                // VDR 추가 필드
                 if (target === 'vdr') {
                     html += '<div class="added-section" style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #5d4037;">';
                     html += '<h5 style="color: #a5d6a7; margin-bottom: 6px;">VDR fields added:</h5>';
@@ -583,7 +925,7 @@
             });
         }
 
-        // ============ VALIDATOR FUNCTIONS ============
+        // ============ 검증기 함수 ============
         validatorUploadArea.addEventListener('click', () => validatorFileInput.click());
         validatorUploadArea.addEventListener('dragover', e => {
             e.preventDefault();
@@ -618,12 +960,17 @@
                 validatorData = JSON.parse(content);
                 validatorDetectedType = detectFormat(validatorData);
                 
-                // Update detected format display
+                // 모든 형식 카드 및 버전 초기화
                 document.querySelectorAll('#validator .format-card').forEach(card => {
                     card.classList.remove('detected');
                 });
+                resetFormatVersions('detect');
+                
                 if (validatorDetectedType !== 'unknown') {
                     document.getElementById('detect' + validatorDetectedType.charAt(0).toUpperCase() + validatorDetectedType.slice(1)).classList.add('detected');
+                    // 감지된 버전 업데이트
+                    const detectedVersion = detectVersion(validatorData, validatorDetectedType);
+                    updateFormatVersion('detect', validatorDetectedType, detectedVersion);
                 }
                 
                 validateBtn.disabled = false;
@@ -643,6 +990,7 @@
             document.querySelectorAll('#validator .format-card').forEach(card => {
                 card.classList.remove('detected');
             });
+            resetFormatVersions('detect');
         }
 
         validateBtn.addEventListener('click', async () => {
@@ -688,7 +1036,6 @@
             const errors = result.errors ? result.errors.filter(e => e.severity === 'error') : [];
             const warnings = result.errors ? result.errors.filter(e => e.severity === 'warning') : [];
 
-            // Badges
             let badgesHTML = `
                 <div class="validation-badge ${levels.schema ? 'pass' : 'fail'}">
                     ${levels.schema ? '&#10003;' : '&#10007;'} Schema
@@ -764,7 +1111,7 @@
             contentElement.innerHTML = `<div class="alert alert-error">${escapeHtml(message)}</div>`;
         }
 
-        // ============ RULES REFERENCE ============
+        // ============ 규칙 참조 ============
         document.getElementById('showRulesBtn').addEventListener('click', () => {
             document.getElementById('ruleReference').classList.add('show');
         });
@@ -810,7 +1157,7 @@
         }
         initRulesDisplay();
 
-        // ============ CONVERTER FUNCTIONS ============
+        // ============ 변환기 함수 ============
         converterUploadArea.addEventListener('click', () => converterFileInput.click());
         converterUploadArea.addEventListener('dragover', e => {
             e.preventDefault();
@@ -845,15 +1192,20 @@
                 converterData = JSON.parse(content);
                 converterSourceType = detectFormat(converterData);
                 
-                // Update source format display
+                // 모든 소스 형식 카드 및 버전 초기화
                 document.querySelectorAll('[id^="src"]').forEach(card => {
                     card.classList.remove('detected');
                 });
+                resetFormatVersions('src');
+                
                 if (converterSourceType !== 'unknown') {
                     const srcElement = document.getElementById('src' + converterSourceType.charAt(0).toUpperCase() + converterSourceType.slice(1));
                     if (srcElement) {
                         srcElement.classList.add('detected');
                     }
+                    // 감지된 버전 업데이트
+                    const detectedVersion = detectVersion(converterData, converterSourceType);
+                    updateFormatVersion('src', converterSourceType, detectedVersion);
                 }
                 
                 updateConvertButton();
@@ -862,10 +1214,10 @@
                 return;
             }
             
-            // Reset loss analysis and call API for dynamic analysis
-            lossAnalysis = null;
-            updateMappingTooltips(); // Show "Analyzing..." first
-            await analyzeLossFields(); // Then update with actual results
+            // 초기화 및 모든 대상에 대해 분석
+            analysisByTarget = {};
+            updateMappingTooltips(); // 먼저 "Analyzing..." 표시
+            await analyzeLossFieldsForAllTargets(); // 그 다음 실제 결과로 업데이트
         }
 
         function resetConverter() {
@@ -873,7 +1225,9 @@
             converterData = null;
             converterSourceType = null;
             converterTargetType = null;
-            lossAnalysis = null;
+            analysisByTarget = {};
+            currentUnmappedFields = [];
+            isExpanded = false;
             converterFileInput.value = '';
             converterFileInfo.classList.remove('show');
             convertBtn.disabled = true;
@@ -881,9 +1235,15 @@
             document.querySelectorAll('[id^="src"], [id^="tgt"]').forEach(card => {
                 card.classList.remove('detected', 'selected');
             });
+            // 소스 형식 버전 초기화
+            resetFormatVersions('src');
+            // 툴팁 초기화
+            ['Openvex', 'Csaf', 'Cyclonedx', 'Vdr'].forEach(t => {
+                const tooltip = document.getElementById('tooltip' + t);
+                if (tooltip) tooltip.innerHTML = '';
+            });
         }
 
-        // Target format selection
         document.querySelectorAll('[data-target]').forEach(card => {
             card.addEventListener('click', () => {
                 document.querySelectorAll('[data-target]').forEach(c => c.classList.remove('selected'));
@@ -894,7 +1254,9 @@
         });
 
         function updateConvertButton() {
-            convertBtn.disabled = !(converterData && converterSourceType && converterTargetType && converterSourceType !== converterTargetType);
+            const canConvert = converterData && converterSourceType && converterTargetType && converterSourceType !== converterTargetType;
+            convertBtn.disabled = !canConvert;
+            document.getElementById('viewMappingsBtn').disabled = !canConvert;
         }
 
         convertBtn.addEventListener('click', async () => {
@@ -941,34 +1303,156 @@
             document.getElementById('convTgtFormat').textContent = result.conversionInfo.targetFormat.toUpperCase();
             document.getElementById('convTimestamp').textContent = result.conversionInfo.timestamp;
             document.getElementById('convertedJson').textContent = JSON.stringify(result.result, null, 2);
+            
+            // Field Mappings Applied 섹션이 View Field Mappings로 통합되어 제거됨
+            // 상세 매핑 정보는 "View Field Mappings" 버튼으로 확인
+        }
+        
+        // renderLostList 함수 제거됨 - View Field Mappings로 통합
 
-            // Display dynamic loss analysis
-            const lossAnalysis = result.conversionInfo.lossAnalysis || {};
-            const mappingGrid = document.getElementById('mappingGrid');
-            const lostInfo = document.getElementById('lostInfo');
-            const lostList = document.getElementById('lostList');
-
-            // Display statistics
-            let gridHtml = '<div class="mapping-row header"><span class="source-col">Analysis</span><span class="arrow-col"></span><span class="target-col">Result</span></div>';
-            gridHtml += `<div class="mapping-row"><span class="source-col">Total Values</span><span class="arrow-col">:</span><span class="target-col">${lossAnalysis.total_values || 'N/A'}</span></div>`;
-            gridHtml += `<div class="mapping-row"><span class="source-col">Mapped to CIM</span><span class="arrow-col">:</span><span class="target-col" style="color: #2e7d32;">${lossAnalysis.mapped_count || 'N/A'}</span></div>`;
-            gridHtml += `<div class="mapping-row"><span class="source-col">Not Mapped</span><span class="arrow-col">:</span><span class="target-col" style="color: #c62828;">${lossAnalysis.unmapped_count || 'N/A'}</span></div>`;
-            mappingGrid.innerHTML = gridHtml;
-
-            // Display unmapped fields
-            const unmappedFields = lossAnalysis.unmapped_fields || [];
-            if (unmappedFields.length > 0) {
-                lostInfo.style.display = 'block';
-                lostList.innerHTML = unmappedFields.slice(0, 15).map(item => {
-                    const path = item.path || item;
-                    const value = item.value ? ` = "${item.value.substring(0, 50)}${item.value.length > 50 ? '...' : ''}"` : '';
-                    return `<li><strong>${path}</strong>${value}</li>`;
-                }).join('');
-                if (unmappedFields.length > 15) {
-                    lostList.innerHTML += `<li style="color: #999;">+ ${unmappedFields.length - 15} more fields...</li>`;
+        // ============ 필드 매핑 보기 ============
+        const viewMappingsBtn = document.getElementById('viewMappingsBtn');
+        const fieldMappingsReference = document.getElementById('fieldMappingsReference');
+        const hideMappingsBtn = document.getElementById('hideMappingsBtn');
+        
+        function updateViewMappingsButton() {
+            viewMappingsBtn.disabled = !(converterData && converterSourceType && converterTargetType && converterSourceType !== converterTargetType);
+        }
+        
+        viewMappingsBtn.addEventListener('click', async () => {
+            if (!converterData || !converterTargetType) return;
+            
+            try {
+                const response = await fetch('/api/analyze-field-mappings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        content: converterData,
+                        targetFormat: converterTargetType
+                    })
+                });
+                
+                // 응답이 JSON 대신 HTML(오류 페이지)인지 확인
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    alert('Server returned an invalid response. Please restart the server.');
+                    return;
                 }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayFieldMappings(result);
+                    fieldMappingsReference.classList.add('show');
+                } else {
+                    alert('Failed to load field mappings: ' + result.error);
+                }
+            } catch (e) {
+                alert('Error loading field mappings: ' + e.message);
+            }
+        });
+        
+        hideMappingsBtn.addEventListener('click', () => {
+            fieldMappingsReference.classList.remove('show');
+        });
+        
+        function displayFieldMappings(data) {
+            // 변환 경로 표시
+            document.getElementById('conversionPathDisplay').textContent = data.conversionPath;
+            
+            // 상태 매핑 표시
+            const statusTable = document.getElementById('statusMappingsTable');
+            if (data.valueMappings.status && Object.keys(data.valueMappings.status).length > 0) {
+                let html = '';
+                for (const [source, target] of Object.entries(data.valueMappings.status)) {
+                    html += `<div class="value-mapping-row">
+                        <span class="source-val">${source}</span>
+                        <span class="arrow">→</span>
+                        <span class="target-val">${target}</span>
+                    </div>`;
+                }
+                statusTable.innerHTML = html;
             } else {
-                lostInfo.style.display = 'none';
+                statusTable.innerHTML = '<div class="no-mapping">Same format or direct mapping (no conversion needed)</div>';
+            }
+            
+            // 정당화 사유 매핑 표시
+            const justTable = document.getElementById('justMappingsTable');
+            if (data.valueMappings.justification && Object.keys(data.valueMappings.justification).length > 0) {
+                let html = '';
+                for (const [source, target] of Object.entries(data.valueMappings.justification)) {
+                    html += `<div class="value-mapping-row">
+                        <span class="source-val">${source}</span>
+                        <span class="arrow">→</span>
+                        <span class="target-val">${target}</span>
+                    </div>`;
+                }
+                justTable.innerHTML = html;
+            } else {
+                justTable.innerHTML = '<div class="no-mapping">Same format or direct mapping (no conversion needed)</div>';
+            }
+            
+            // Source → Target 직접 매핑 표시
+            const sourceToTargetTable = document.getElementById('sourceToTargetTable');
+            
+            // 동적 필드 매핑 분석 결과 표시 (실제 변환 결과 기반)
+            if (data.fieldMappings && data.fieldMappings.length > 0) {
+                // 통계 헤더
+                let html = `<div style="background: #f5f5f5; padding: 12px 16px; border-bottom: 2px solid #e0e0e0; margin-bottom: 8px;">
+                    <strong>Field Analysis (Based on Actual Conversion)</strong><br>
+                    ${data.statistics.totalFields} fields | 
+                    <span style="color: #2e7d32;">✓ ${data.statistics.mappedFields} mapped</span> | 
+                    <span style="color: #c62828;">✗ ${data.statistics.lostFields} lost</span> | 
+                    Rate: ${data.statistics.mappingRate}
+                </div>`;
+                
+                // 매핑된 필드 먼저, 손실된 필드 나중에
+                const mappedFields = data.fieldMappings.filter(f => f.status === 'MAPPED');
+                const lostFields = data.fieldMappings.filter(f => f.status === 'LOST');
+                
+                // 매핑된 필드 표시
+                if (mappedFields.length > 0) {
+                    html += '<div class="mapping-row-detail header"><span>Source Field</span><span></span><span>Target Field</span></div>';
+                    
+                    for (const mapping of mappedFields) {
+                        const valueDisplay = mapping.value 
+                            ? `<div style="color: #666; font-size: 11px; margin-top: 2px; word-break: break-all;">(${mapping.value})</div>` 
+                            : '';
+                        
+                        html += `<div class="mapping-row-detail">
+                            <span class="source-field">
+                                <div>${mapping.source}</div>
+                                ${valueDisplay}
+                            </span>
+                            <span class="arrow" style="color: #2e7d32;">→</span>
+                            <span class="target-field" style="color: #2e7d32;">${mapping.target}</span>
+                        </div>`;
+                    }
+                }
+                
+                // 손실된 필드 표시
+                if (lostFields.length > 0) {
+                    html += '<div class="mapping-row-detail header" style="margin-top: 16px; border-top: 2px solid #ffcdd2; background: #ffebee;"><span>Lost Fields (Not in Conversion Output)</span><span></span><span>Status</span></div>';
+                    
+                    for (const mapping of lostFields) {
+                        const valueDisplay = mapping.value 
+                            ? `<div style="color: #999; font-size: 11px; margin-top: 2px; word-break: break-all;">(${mapping.value})</div>` 
+                            : '';
+                        
+                        html += `<div class="mapping-row-detail" style="background: #fff8f8;">
+                            <span class="source-field">
+                                <div>${mapping.source}</div>
+                                ${valueDisplay}
+                            </span>
+                            <span class="arrow" style="color: #c62828;">✗</span>
+                            <span class="target-field" style="color: #c62828;">LOST</span>
+                        </div>`;
+                    }
+                }
+                
+                sourceToTargetTable.innerHTML = html;
+            } else {
+                sourceToTargetTable.innerHTML = '<div class="no-mapping">No field mappings available. Convert the document first.</div>';
             }
         }
 

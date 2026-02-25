@@ -1,1564 +1,811 @@
-#!/usr/bin/env python3
 """
-CSAF Enhanced Validator v2.1
-Complete implementation of CSAF 2.1 Mandatory Tests (6.1) and Recommended Tests (6.2)
+CSAF VEX 프로필 검증기 v1.0.0
+CSAF 2.0 명세 기반 VEX 프로필 검증 규칙
+
+참조:
+- CSAF 2.0 명세서 Section 4.5 (VEX Profile)
+- CSAF 2.0 명세서 Section 6.1 (Mandatory Tests)
+
+Mandatory Tests:
+- 6.1.1~26: 일반 필수 테스트
+- 6.1.27.4~11: VEX 프로필 전용 테스트
+
+심각도:
+- error: MUST 규칙 (검증 실패)
+- warning: SHOULD 규칙 (권장사항)
 """
 
-import json
 import re
-from jsonschema import Draft7Validator
-from typing import Dict, Any, List, Tuple, Set, Optional
 from datetime import datetime
+from typing import Dict, List, Any, Optional, Set, Tuple
 
+try:
+    import jsonschema
+    HAS_JSONSCHEMA = True
+except ImportError:
+    HAS_JSONSCHEMA = False
 
-# ============ CONSTANTS ============
+# PURL 패턴
+PURL_PATTERN = re.compile(r'^pkg:[a-z]+/.+')
 
-# 6.2.27: Discouraged Product Status / Remediation combinations
-DISCOURAGED_STATUS_REMEDIATION = {
-    # known_not_affected should not have fix-related remediations
-    "known_not_affected": ["vendor_fix", "fix_planned", "optional_patch"],
-    # fixed should not have "no fix" remediations
-    "fixed": ["no_fix_planned", "none_available"],
-    "first_fixed": ["no_fix_planned", "none_available"],
+# VEX Justification 라벨 (6.1.33)
+VEX_JUSTIFICATION_LABELS = {
+    'component_not_present',
+    'vulnerable_code_not_present',
+    'vulnerable_code_cannot_be_controlled_by_adversary',
+    'vulnerable_code_not_in_execute_path',
+    'inline_mitigations_already_exist'
 }
 
-# 6.2.28, 6.2.29: Special UUIDs
-MAX_UUID = "ffffffff-ffff-ffff-ffff-ffffffffffff"
-NIL_UUID = "00000000-0000-0000-0000-000000000000"
 
-# 6.2.34: Registered SSVC namespaces
-REGISTERED_SSVC_NAMESPACES = [
-    "ssvc",
-    "ssvc/cisa",
-    "ssvc/first", 
-]
+class CSAFValidator:
+    """CSAF 2.0 VEX 프로필 검증기"""
+    
+    VERSION = "1.0.0"
+    
+    def __init__(self, data: Dict[str, Any], schema: Optional[Dict] = None):
+        self.data = data
+        self.schema = schema
+        self.errors: List[Dict[str, Any]] = []
+        self.doc_version = self._detect_version()
+        
+        # Product ID/Group ID 수집
+        self.defined_product_ids: Set[str] = set()
+        self.defined_group_ids: Set[str] = set()
+        self.product_id_locations: Dict[str, List[str]] = {}
+        self.group_id_locations: Dict[str, List[str]] = {}
+        
+    def _detect_version(self) -> str:
+        """CSAF 버전 감지"""
+        doc = self.data.get('document', {})
+        return doc.get('csaf_version', '2.0')
+    
+    def _add_error(self, rule_id: str, message: str, path: str, detail: str = ''):
+        """에러 추가"""
+        self.errors.append({
+            'rule_id': rule_id,
+            'severity': 'error',
+            'message': message,
+            'path': path,
+            'detail': detail
+        })
+    
+    def _add_warning(self, rule_id: str, message: str, path: str, detail: str = ''):
+        """경고 추가"""
+        self.errors.append({
+            'rule_id': rule_id,
+            'severity': 'warning',
+            'message': message,
+            'path': path,
+            'detail': detail
+        })
+    
+    def validate(self) -> Dict[str, Any]:
+        """전체 검증 실행"""
+        
+        # 1단계: JSON Schema 검증
+        self._validate_schema()
+        
+        # 2단계: Product ID/Group ID 수집
+        self._collect_product_ids()
+        self._collect_group_ids()
+        
+        # 3단계: 일반 Mandatory Tests (6.1.1~26)
+        self._test_6_1_1_missing_product_id()
+        self._test_6_1_2_multiple_product_id()
+        self._test_6_1_4_missing_group_id()
+        self._test_6_1_5_multiple_group_id()
+        self._test_6_1_6_contradicting_status()
+        self._test_6_1_13_purl()
+        self._test_6_1_23_multiple_cve()
+        self._test_6_1_29_remediation_without_product()
+        self._test_6_1_32_flag_without_product()
+        self._test_6_1_33_multiple_flags_per_product()
+        
+        # 4단계: VEX 프로필 테스트 (6.1.27.4~11)
+        self._test_vex_category()
+        self._test_6_1_27_4_product_tree()
+        self._test_6_1_27_5_vulnerability_notes()
+        self._test_6_1_27_7_vex_product_status()
+        self._test_6_1_27_8_vulnerability_id()
+        self._test_6_1_27_9_impact_statement()
+        self._test_6_1_27_10_action_statement()
+        self._test_6_1_27_11_vulnerabilities()
+        
+        return self._build_result()
+    
+    def _validate_schema(self):
+        """JSON Schema 검증"""
+        if not self.schema or not HAS_JSONSCHEMA:
+            return
+        
+        try:
+            validator = jsonschema.Draft7Validator(self.schema)
+            schema_errors = sorted(validator.iter_errors(self.data), key=lambda e: e.path)
+            
+            for error in schema_errors:
+                path = "/" + "/".join(str(p) for p in error.path) if error.path else "/"
+                self._add_error(
+                    'SCHEMA-CSAF-001',
+                    f'JSON Schema validation failed: {error.message}',
+                    path,
+                    ''
+                )
+        except Exception as e:
+            self._add_error(
+                'SCHEMA-CSAF-000',
+                f'Schema validation error: {str(e)}',
+                '/',
+                ''
+            )
+    
+    def _collect_product_ids(self):
+        """Product ID 정의 위치 수집 (6.1.1, 6.1.2용)"""
+        pt = self.data.get('product_tree', {})
+        
+        def collect_from_branches(branches, path_prefix):
+            for idx, branch in enumerate(branches or []):
+                branch_path = f'{path_prefix}[{idx}]'
+                
+                # branch.product.product_id
+                product = branch.get('product', {})
+                if product and 'product_id' in product:
+                    pid = product['product_id']
+                    self.defined_product_ids.add(pid)
+                    if pid not in self.product_id_locations:
+                        self.product_id_locations[pid] = []
+                    self.product_id_locations[pid].append(f'{branch_path}/product/product_id')
+                
+                # 재귀적으로 하위 branches 처리
+                if 'branches' in branch:
+                    collect_from_branches(branch['branches'], f'{branch_path}/branches')
+        
+        # /product_tree/branches
+        collect_from_branches(pt.get('branches', []), '/product_tree/branches')
+        
+        # /product_tree/full_product_names
+        for idx, fpn in enumerate(pt.get('full_product_names', [])):
+            if 'product_id' in fpn:
+                pid = fpn['product_id']
+                self.defined_product_ids.add(pid)
+                if pid not in self.product_id_locations:
+                    self.product_id_locations[pid] = []
+                self.product_id_locations[pid].append(f'/product_tree/full_product_names[{idx}]/product_id')
+        
+        # /product_tree/relationships
+        for idx, rel in enumerate(pt.get('relationships', [])):
+            fpn = rel.get('full_product_name', {})
+            if 'product_id' in fpn:
+                pid = fpn['product_id']
+                self.defined_product_ids.add(pid)
+                if pid not in self.product_id_locations:
+                    self.product_id_locations[pid] = []
+                self.product_id_locations[pid].append(f'/product_tree/relationships[{idx}]/full_product_name/product_id')
+    
+    def _collect_group_ids(self):
+        """Product Group ID 정의 위치 수집 (6.1.4, 6.1.5용)"""
+        pt = self.data.get('product_tree', {})
+        
+        for idx, group in enumerate(pt.get('product_groups', [])):
+            if 'group_id' in group:
+                gid = group['group_id']
+                self.defined_group_ids.add(gid)
+                if gid not in self.group_id_locations:
+                    self.group_id_locations[gid] = []
+                self.group_id_locations[gid].append(f'/product_tree/product_groups[{idx}]/group_id')
+    
+    # =========================================================================
+    # 6.1.1 Missing Definition of Product ID
+    # =========================================================================
+    def _test_6_1_1_missing_product_id(self):
+        """6.1.1: 참조된 Product ID가 product_tree에 정의되어 있는지 검증"""
+        pt = self.data.get('product_tree', {})
+        vulns = self.data.get('vulnerabilities', [])
+        
+        # product_groups의 product_ids 검사
+        for g_idx, group in enumerate(pt.get('product_groups', [])):
+            for p_idx, pid in enumerate(group.get('product_ids', [])):
+                if pid not in self.defined_product_ids:
+                    self._add_error(
+                        'CSAF-6.1.1',
+                        f'Product ID "{pid}" is not defined in product_tree',
+                        f'/product_tree/product_groups[{g_idx}]/product_ids[{p_idx}]',
+                        'All referenced Product IDs must be defined in product_tree'
+                    )
+        
+        # relationships의 product_reference, relates_to_product_reference 검사
+        for r_idx, rel in enumerate(pt.get('relationships', [])):
+            for field in ['product_reference', 'relates_to_product_reference']:
+                pid = rel.get(field)
+                if pid and pid not in self.defined_product_ids:
+                    self._add_error(
+                        'CSAF-6.1.1',
+                        f'Product ID "{pid}" is not defined in product_tree',
+                        f'/product_tree/relationships[{r_idx}]/{field}',
+                        ''
+                    )
+        
+        # vulnerabilities의 product_status, remediations, threats, scores 검사
+        status_fields = ['fixed', 'known_affected', 'known_not_affected', 'under_investigation',
+                         'first_affected', 'first_fixed', 'last_affected', 'recommended']
+        
+        for v_idx, vuln in enumerate(vulns):
+            v_path = f'/vulnerabilities[{v_idx}]'
+            
+            # product_status
+            ps = vuln.get('product_status', {})
+            for field in status_fields:
+                for p_idx, pid in enumerate(ps.get(field, [])):
+                    if pid not in self.defined_product_ids:
+                        self._add_error(
+                            'CSAF-6.1.1',
+                            f'Product ID "{pid}" is not defined in product_tree',
+                            f'{v_path}/product_status/{field}[{p_idx}]',
+                            ''
+                        )
+            
+            # remediations[].product_ids
+            for r_idx, rem in enumerate(vuln.get('remediations', [])):
+                for p_idx, pid in enumerate(rem.get('product_ids', [])):
+                    if pid not in self.defined_product_ids:
+                        self._add_error(
+                            'CSAF-6.1.1',
+                            f'Product ID "{pid}" is not defined in product_tree',
+                            f'{v_path}/remediations[{r_idx}]/product_ids[{p_idx}]',
+                            ''
+                        )
+            
+            # threats[].product_ids
+            for t_idx, threat in enumerate(vuln.get('threats', [])):
+                for p_idx, pid in enumerate(threat.get('product_ids', [])):
+                    if pid not in self.defined_product_ids:
+                        self._add_error(
+                            'CSAF-6.1.1',
+                            f'Product ID "{pid}" is not defined in product_tree',
+                            f'{v_path}/threats[{t_idx}]/product_ids[{p_idx}]',
+                            ''
+                        )
+            
+            # scores[].products
+            for s_idx, score in enumerate(vuln.get('scores', [])):
+                for p_idx, pid in enumerate(score.get('products', [])):
+                    if pid not in self.defined_product_ids:
+                        self._add_error(
+                            'CSAF-6.1.1',
+                            f'Product ID "{pid}" is not defined in product_tree',
+                            f'{v_path}/scores[{s_idx}]/products[{p_idx}]',
+                            ''
+                        )
+    
+    # =========================================================================
+    # 6.1.2 Multiple Definition of Product ID
+    # =========================================================================
+    def _test_6_1_2_multiple_product_id(self):
+        """6.1.2: Product ID 중복 정의 검사"""
+        for pid, locations in self.product_id_locations.items():
+            if len(locations) > 1:
+                self._add_error(
+                    'CSAF-6.1.2',
+                    f'Product ID "{pid}" is defined {len(locations)} times',
+                    locations[0],
+                    f'Locations: {", ".join(locations)}'
+                )
+    
+    # =========================================================================
+    # 6.1.4 Missing Definition of Product Group ID
+    # =========================================================================
+    def _test_6_1_4_missing_group_id(self):
+        """6.1.4: 참조된 Group ID가 정의되어 있는지 검증"""
+        vulns = self.data.get('vulnerabilities', [])
+        
+        for v_idx, vuln in enumerate(vulns):
+            v_path = f'/vulnerabilities[{v_idx}]'
+            
+            # remediations[].group_ids
+            for r_idx, rem in enumerate(vuln.get('remediations', [])):
+                for g_idx, gid in enumerate(rem.get('group_ids', [])):
+                    if gid not in self.defined_group_ids:
+                        self._add_error(
+                            'CSAF-6.1.4',
+                            f'Group ID "{gid}" is not defined in product_tree',
+                            f'{v_path}/remediations[{r_idx}]/group_ids[{g_idx}]',
+                            ''
+                        )
+            
+            # threats[].group_ids
+            for t_idx, threat in enumerate(vuln.get('threats', [])):
+                for g_idx, gid in enumerate(threat.get('group_ids', [])):
+                    if gid not in self.defined_group_ids:
+                        self._add_error(
+                            'CSAF-6.1.4',
+                            f'Group ID "{gid}" is not defined in product_tree',
+                            f'{v_path}/threats[{t_idx}]/group_ids[{g_idx}]',
+                            ''
+                        )
+    
+    # =========================================================================
+    # 6.1.5 Multiple Definition of Product Group ID
+    # =========================================================================
+    def _test_6_1_5_multiple_group_id(self):
+        """6.1.5: Group ID 중복 정의 검사"""
+        for gid, locations in self.group_id_locations.items():
+            if len(locations) > 1:
+                self._add_error(
+                    'CSAF-6.1.5',
+                    f'Group ID "{gid}" is defined {len(locations)} times',
+                    locations[0],
+                    f'Locations: {", ".join(locations)}'
+                )
+    
+    # =========================================================================
+    # 6.1.6 Contradicting Product Status
+    # =========================================================================
+    def _test_6_1_6_contradicting_status(self):
+        """6.1.6: 모순되는 Product Status 검사"""
+        vulns = self.data.get('vulnerabilities', [])
+        
+        # 모순 그룹 정의
+        affected_fields = ['first_affected', 'known_affected', 'last_affected']
+        not_affected_fields = ['known_not_affected']
+        fixed_fields = ['first_fixed', 'fixed']
+        under_investigation_fields = ['under_investigation']
+        
+        for v_idx, vuln in enumerate(vulns):
+            v_path = f'/vulnerabilities[{v_idx}]'
+            ps = vuln.get('product_status', {})
+            
+            # 각 그룹별 Product ID 수집
+            affected = set()
+            for f in affected_fields:
+                affected.update(ps.get(f, []))
+            
+            not_affected = set()
+            for f in not_affected_fields:
+                not_affected.update(ps.get(f, []))
+            
+            fixed = set()
+            for f in fixed_fields:
+                fixed.update(ps.get(f, []))
+            
+            under_inv = set()
+            for f in under_investigation_fields:
+                under_inv.update(ps.get(f, []))
+            
+            # 모순 검사
+            groups = [
+                ('Affected', affected),
+                ('Not Affected', not_affected),
+                ('Fixed', fixed),
+                ('Under Investigation', under_inv)
+            ]
+            
+            for i, (name1, set1) in enumerate(groups):
+                for name2, set2 in groups[i+1:]:
+                    overlap = set1 & set2
+                    for pid in overlap:
+                        self._add_error(
+                            'CSAF-6.1.6',
+                            f'Product ID "{pid}" has contradicting status: {name1} and {name2}',
+                            f'{v_path}/product_status',
+                            ''
+                        )
+    
+    # =========================================================================
+    # 6.1.13 PURL
+    # =========================================================================
+    def _test_6_1_13_purl(self):
+        """6.1.13: PURL 형식 검증"""
+        pt = self.data.get('product_tree', {})
+        
+        def check_pih(pih: Dict, path: str):
+            purl = pih.get('purl')
+            if purl:
+                if not PURL_PATTERN.match(purl):
+                    self._add_error(
+                        'CSAF-6.1.13',
+                        f'Invalid PURL format: "{purl}"',
+                        f'{path}/purl',
+                        'PURL must start with "pkg:" followed by type and path'
+                    )
+            
+            # purls 배열도 검사
+            for idx, p in enumerate(pih.get('purls', [])):
+                if not PURL_PATTERN.match(p):
+                    self._add_error(
+                        'CSAF-6.1.13',
+                        f'Invalid PURL format: "{p}"',
+                        f'{path}/purls[{idx}]',
+                        ''
+                    )
+        
+        def check_branches(branches, path_prefix):
+            for idx, branch in enumerate(branches or []):
+                branch_path = f'{path_prefix}[{idx}]'
+                product = branch.get('product', {})
+                if product:
+                    pih = product.get('product_identification_helper', {})
+                    check_pih(pih, f'{branch_path}/product/product_identification_helper')
+                
+                if 'branches' in branch:
+                    check_branches(branch['branches'], f'{branch_path}/branches')
+        
+        # branches 검사
+        check_branches(pt.get('branches', []), '/product_tree/branches')
+        
+        # full_product_names 검사
+        for idx, fpn in enumerate(pt.get('full_product_names', [])):
+            pih = fpn.get('product_identification_helper', {})
+            check_pih(pih, f'/product_tree/full_product_names[{idx}]/product_identification_helper')
+        
+        # relationships 검사
+        for idx, rel in enumerate(pt.get('relationships', [])):
+            fpn = rel.get('full_product_name', {})
+            pih = fpn.get('product_identification_helper', {})
+            check_pih(pih, f'/product_tree/relationships[{idx}]/full_product_name/product_identification_helper')
+    
+    # =========================================================================
+    # 6.1.23 Multiple Use of Same CVE
+    # =========================================================================
+    def _test_6_1_23_multiple_cve(self):
+        """6.1.23: 동일 CVE 중복 사용 검사"""
+        vulns = self.data.get('vulnerabilities', [])
+        cve_locations: Dict[str, List[int]] = {}
+        
+        for v_idx, vuln in enumerate(vulns):
+            cve = vuln.get('cve')
+            if cve:
+                if cve not in cve_locations:
+                    cve_locations[cve] = []
+                cve_locations[cve].append(v_idx)
+        
+        for cve, indices in cve_locations.items():
+            if len(indices) > 1:
+                self._add_error(
+                    'CSAF-6.1.23',
+                    f'CVE "{cve}" is used in multiple vulnerability entries',
+                    f'/vulnerabilities[{indices[0]}]/cve',
+                    f'Indices: {indices}'
+                )
+    
+    # =========================================================================
+    # 6.1.29 Remediation without Product Reference
+    # =========================================================================
+    def _test_6_1_29_remediation_without_product(self):
+        """6.1.29: product_ids 또는 group_ids 없는 remediation 검사"""
+        vulns = self.data.get('vulnerabilities', [])
+        
+        for v_idx, vuln in enumerate(vulns):
+            v_path = f'/vulnerabilities[{v_idx}]'
+            
+            for r_idx, rem in enumerate(vuln.get('remediations', [])):
+                has_products = bool(rem.get('product_ids'))
+                has_groups = bool(rem.get('group_ids'))
+                
+                if not has_products and not has_groups:
+                    self._add_error(
+                        'CSAF-6.1.29',
+                        'Remediation has no product_ids or group_ids',
+                        f'{v_path}/remediations[{r_idx}]',
+                        'Target products must be specified'
+                    )
+    
+    # =========================================================================
+    # 6.1.32 Flag without Product Reference
+    # =========================================================================
+    def _test_6_1_32_flag_without_product(self):
+        """6.1.32: product_ids 또는 group_ids 없는 flag 검사"""
+        vulns = self.data.get('vulnerabilities', [])
+        
+        for v_idx, vuln in enumerate(vulns):
+            v_path = f'/vulnerabilities[{v_idx}]'
+            
+            for f_idx, flag in enumerate(vuln.get('flags', [])):
+                has_products = bool(flag.get('product_ids'))
+                has_groups = bool(flag.get('group_ids'))
+                
+                if not has_products and not has_groups:
+                    self._add_error(
+                        'CSAF-6.1.32',
+                        'Flag has no product_ids or group_ids',
+                        f'{v_path}/flags[{f_idx}]',
+                        'Target products must be specified'
+                    )
+    
+    # =========================================================================
+    # 6.1.33 Multiple Flags with VEX Justification Codes per Product
+    # =========================================================================
+    def _test_6_1_33_multiple_flags_per_product(self):
+        """6.1.33: 동일 Product에 대한 다중 VEX Justification Flag 검사"""
+        vulns = self.data.get('vulnerabilities', [])
+        pt = self.data.get('product_tree', {})
+        
+        # Group ID → Product IDs 매핑
+        group_to_products: Dict[str, Set[str]] = {}
+        for group in pt.get('product_groups', []):
+            gid = group.get('group_id')
+            if gid:
+                group_to_products[gid] = set(group.get('product_ids', []))
+        
+        for v_idx, vuln in enumerate(vulns):
+            v_path = f'/vulnerabilities[{v_idx}]'
+            
+            # Product ID → Flag 라벨 매핑
+            product_flags: Dict[str, List[str]] = {}
+            
+            for f_idx, flag in enumerate(vuln.get('flags', [])):
+                label = flag.get('label', '')
+                
+                # VEX justification 라벨만 검사
+                if label not in VEX_JUSTIFICATION_LABELS:
+                    continue
+                
+                # 직접 참조된 product_ids
+                for pid in flag.get('product_ids', []):
+                    if pid not in product_flags:
+                        product_flags[pid] = []
+                    product_flags[pid].append(label)
+                
+                # group_ids를 통한 간접 참조
+                for gid in flag.get('group_ids', []):
+                    for pid in group_to_products.get(gid, []):
+                        if pid not in product_flags:
+                            product_flags[pid] = []
+                        product_flags[pid].append(label)
+            
+            # 다중 flag 검사
+            for pid, labels in product_flags.items():
+                if len(labels) > 1:
+                    self._add_error(
+                        'CSAF-6.1.33',
+                        f'Product "{pid}" has multiple VEX justification flags',
+                        f'{v_path}/flags',
+                        f'Labels: {", ".join(labels)}'
+                    )
+    
+    # =========================================================================
+    # VEX Profile - Category (4.5)
+    # =========================================================================
+    def _test_vex_category(self):
+        """4.5: VEX 프로필은 category가 csaf_vex여야 함"""
+        doc = self.data.get('document', {})
+        category = doc.get('category', '')
+        
+        if category.lower() != 'csaf_vex':
+            self._add_error(
+                'CSAF-VEX-CAT',
+                'VEX profile document.category must be "csaf_vex"',
+                '/document/category',
+                f'Current value: "{category}"'
+            )
+    
+    # =========================================================================
+    # 6.1.27.4 Product Tree
+    # =========================================================================
+    def _test_6_1_27_4_product_tree(self):
+        """6.1.27.4: VEX 프로필은 product_tree 필수"""
+        if 'product_tree' not in self.data:
+            self._add_error(
+                'CSAF-6.1.27.4',
+                'VEX profile requires product_tree',
+                '/product_tree',
+                ''
+            )
+    
+    # =========================================================================
+    # 6.1.27.5 Vulnerability Notes
+    # =========================================================================
+    def _test_6_1_27_5_vulnerability_notes(self):
+        """6.1.27.5: VEX 프로필은 vulnerabilities[]/notes 필수"""
+        vulns = self.data.get('vulnerabilities', [])
+        
+        for v_idx, vuln in enumerate(vulns):
+            if 'notes' not in vuln or not vuln['notes']:
+                self._add_warning(
+                    'CSAF-6.1.27.5',
+                    'VEX profile recommends vulnerabilities[]/notes',
+                    f'/vulnerabilities[{v_idx}]/notes',
+                    'It is recommended to include detailed information in notes'
+                )
+    
+    # =========================================================================
+    # 6.1.27.7 VEX Product Status
+    # =========================================================================
+    def _test_6_1_27_7_vex_product_status(self):
+        """6.1.27.7: VEX 프로필은 fixed/known_affected/known_not_affected/under_investigation 중 하나 필수"""
+        vulns = self.data.get('vulnerabilities', [])
+        vex_status_fields = ['fixed', 'known_affected', 'known_not_affected', 'under_investigation']
+        
+        for v_idx, vuln in enumerate(vulns):
+            v_path = f'/vulnerabilities[{v_idx}]'
+            ps = vuln.get('product_status', {})
+            
+            has_vex_status = any(ps.get(f) for f in vex_status_fields)
+            
+            if not has_vex_status:
+                self._add_error(
+                    'CSAF-6.1.27.7',
+                    'VEX profile requires product_status with fixed/known_affected/known_not_affected/under_investigation',
+                    f'{v_path}/product_status',
+                    ''
+                )
+    
+    # =========================================================================
+    # 6.1.27.8 Vulnerability ID
+    # =========================================================================
+    def _test_6_1_27_8_vulnerability_id(self):
+        """6.1.27.8: VEX 프로필은 cve 또는 ids 중 하나 필수"""
+        vulns = self.data.get('vulnerabilities', [])
+        
+        for v_idx, vuln in enumerate(vulns):
+            v_path = f'/vulnerabilities[{v_idx}]'
+            
+            has_cve = 'cve' in vuln and vuln['cve']
+            has_ids = 'ids' in vuln and vuln['ids']
+            
+            if not has_cve and not has_ids:
+                self._add_error(
+                    'CSAF-6.1.27.8',
+                    'VEX profile requires cve or ids',
+                    v_path,
+                    ''
+                )
+    
+    # =========================================================================
+    # 6.1.27.9 Impact Statement
+    # =========================================================================
+    def _test_6_1_27_9_impact_statement(self):
+        """6.1.27.9: known_not_affected 제품에 대해 impact statement 필수"""
+        vulns = self.data.get('vulnerabilities', [])
+        pt = self.data.get('product_tree', {})
+        
+        # Group ID → Product IDs 매핑
+        group_to_products: Dict[str, Set[str]] = {}
+        for group in pt.get('product_groups', []):
+            gid = group.get('group_id')
+            if gid:
+                group_to_products[gid] = set(group.get('product_ids', []))
+        
+        for v_idx, vuln in enumerate(vulns):
+            v_path = f'/vulnerabilities[{v_idx}]'
+            ps = vuln.get('product_status', {})
+            
+            kna_products = set(ps.get('known_not_affected', []))
+            if not kna_products:
+                continue
+            
+            # flags에서 커버된 제품 수집
+            covered_by_flags = set()
+            for flag in vuln.get('flags', []):
+                for pid in flag.get('product_ids', []):
+                    covered_by_flags.add(pid)
+                for gid in flag.get('group_ids', []):
+                    covered_by_flags.update(group_to_products.get(gid, []))
+            
+            # threats[category=impact]에서 커버된 제품 수집
+            covered_by_threats = set()
+            for threat in vuln.get('threats', []):
+                if threat.get('category') == 'impact':
+                    for pid in threat.get('product_ids', []):
+                        covered_by_threats.add(pid)
+                    for gid in threat.get('group_ids', []):
+                        covered_by_threats.update(group_to_products.get(gid, []))
+            
+            # 커버되지 않은 제품 검사
+            covered = covered_by_flags | covered_by_threats
+            uncovered = kna_products - covered
+            
+            for pid in uncovered:
+                self._add_error(
+                    'CSAF-6.1.27.9',
+                    f'No impact statement for known_not_affected product "{pid}"',
+                    f'{v_path}/product_status/known_not_affected',
+                    'Must be defined in flags or threats[category=impact]'
+                )
+    
+    # =========================================================================
+    # 6.1.27.10 Action Statement
+    # =========================================================================
+    def _test_6_1_27_10_action_statement(self):
+        """6.1.27.10: known_affected 제품에 대해 action statement(remediation) 필수"""
+        vulns = self.data.get('vulnerabilities', [])
+        pt = self.data.get('product_tree', {})
+        
+        # Group ID → Product IDs 매핑
+        group_to_products: Dict[str, Set[str]] = {}
+        for group in pt.get('product_groups', []):
+            gid = group.get('group_id')
+            if gid:
+                group_to_products[gid] = set(group.get('product_ids', []))
+        
+        for v_idx, vuln in enumerate(vulns):
+            v_path = f'/vulnerabilities[{v_idx}]'
+            ps = vuln.get('product_status', {})
+            
+            ka_products = set(ps.get('known_affected', []))
+            if not ka_products:
+                continue
+            
+            # remediations에서 커버된 제품 수집
+            covered = set()
+            for rem in vuln.get('remediations', []):
+                for pid in rem.get('product_ids', []):
+                    covered.add(pid)
+                for gid in rem.get('group_ids', []):
+                    covered.update(group_to_products.get(gid, []))
+            
+            # 커버되지 않은 제품 검사
+            uncovered = ka_products - covered
+            
+            for pid in uncovered:
+                self._add_error(
+                    'CSAF-6.1.27.10',
+                    f'No action statement for known_affected product "{pid}"',
+                    f'{v_path}/product_status/known_affected',
+                    'Must be defined in remediations'
+                )
+    
+    # =========================================================================
+    # 6.1.27.11 Vulnerabilities
+    # =========================================================================
+    def _test_6_1_27_11_vulnerabilities(self):
+        """6.1.27.11: VEX 프로필은 vulnerabilities 필수"""
+        if 'vulnerabilities' not in self.data or not self.data['vulnerabilities']:
+            self._add_error(
+                'CSAF-6.1.27.11',
+                'VEX profile requires vulnerabilities',
+                '/vulnerabilities',
+                ''
+            )
+    
+    def _build_result(self) -> Dict[str, Any]:
+        """검증 결과 빌드"""
+        has_errors = any(e['severity'] == 'error' for e in self.errors)
+        
+        return {
+            'valid': not has_errors,
+            'version': self.doc_version,
+            'errors': self.errors,
+            'error_count': sum(1 for e in self.errors if e['severity'] == 'error'),
+            'warning_count': sum(1 for e in self.errors if e['severity'] == 'warning')
+        }
 
-# 6.2.37: Registered SSVC roles
-REGISTERED_SSVC_ROLES = [
-    "Coordinator",
-    "Deployer", 
-    "Supplier",
-]
 
-
-def validate_csaf(data: Dict[str, Any], schema: Dict[str, Any]) -> Tuple[bool, List[Dict[str, Any]]]:
+def validate_csaf(data: Dict[str, Any], schema: Optional[Dict] = None, doc_version: str = '') -> Tuple[bool, List[Dict], str]:
     """
-    Complete CSAF validation with all Mandatory (6.1) and Recommended (6.2) tests
+    CSAF VEX 프로필 검증 (app.py 호환 인터페이스)
     
     Returns:
-        (is_valid, errors) - where errors include severity and rule_id
+        (is_valid, errors, detected_version)
     """
-    errors = []
-    
-    # ============ STEP 1: JSON Schema Validation ============
-    try:
-        validator = Draft7Validator(schema)
-        validation_errors = sorted(validator.iter_errors(data), key=lambda e: e.path)
-        
-        for error in validation_errors:
-            path = "/" + "/".join(str(p) for p in error.path) if error.path else "/"
-            schema_path = "/" + "/".join(str(p) for p in error.schema_path) if error.schema_path else "/"
-            
-            errors.append({
-                "path": path,
-                "message": f"[Schema] {error.message}",
-                "schema_path": schema_path,
-                "severity": "error",
-                "rule_id": "SCHEMA-001"
-            })
-    except Exception as e:
-        errors.append({
-            "path": "/",
-            "message": f"[Schema] Validation failed: {str(e)}",
-            "schema_path": "/",
-            "severity": "error",
-            "rule_id": "SCHEMA-000"
-        })
-        return False, errors
-    
-    # ============ STEP 2: Mandatory Tests (6.1) ============
-    _validate_mandatory_tests(data, errors)
-    
-    # ============ STEP 3: Recommended Tests (6.2) ============
-    _validate_recommended_tests(data, errors)
-    
-    # ============ STEP 4: VEX Profile Specific Tests ============
-    is_vex = False
-    if "document" in data and "category" in data["document"]:
-        is_vex = data["document"]["category"] == "csaf_vex"
-    
-    if is_vex:
-        _validate_vex_profile(data, errors)
-    
-    # Determine overall validity (only errors, not warnings)
-    has_errors = any(e["severity"] == "error" for e in errors)
-    return not has_errors, errors
-
-
-def _validate_mandatory_tests(data: Dict[str, Any], errors: List[Dict[str, Any]]):
-    """Validate CSAF 2.1 Mandatory Tests (Section 6.1)"""
-    
-    product_tree = data.get("product_tree", {})
-    document = data.get("document", {})
-    
-    # Collect IDs for reference validation
-    product_ids = _collect_product_ids(product_tree)
-    group_mappings = _collect_group_mappings(product_tree)
-    
-    # 6.1.2: Product ID uniqueness
-    _validate_product_id_uniqueness(product_tree, errors)
-    
-    # 6.1.5: Product Group ID uniqueness
-    _validate_group_id_uniqueness(product_tree, errors)
-    
-    # 6.1.14: Revision history sorted
-    if "tracking" in document and "revision_history" in document["tracking"]:
-        _validate_revision_history_sorted(document["tracking"]["revision_history"], errors)
-    
-    # 6.1.17: Version 0 must be draft
-    if "tracking" in document:
-        tracking = document["tracking"]
-        if "version" in tracking and "status" in tracking:
-            _validate_document_status_draft(tracking["version"], tracking["status"], errors)
-    
-    # Validate vulnerabilities
-    vulnerabilities = data.get("vulnerabilities", [])
-    if isinstance(vulnerabilities, list):
-        for idx, vuln in enumerate(vulnerabilities):
-            _validate_vulnerability_mandatory(vuln, idx, product_ids, group_mappings, errors)
-
-
-def _validate_recommended_tests(data: Dict[str, Any], errors: List[Dict[str, Any]]):
-    """Validate CSAF 2.1 Recommended Tests (Section 6.2)"""
-    
-    product_tree = data.get("product_tree", {})
-    document = data.get("document", {})
-    vulnerabilities = data.get("vulnerabilities", [])
-    
-    # Collect IDs
-    product_ids = _collect_product_ids(product_tree)
-    group_mappings = _collect_group_mappings(product_tree)
-    referenced_product_ids = _collect_referenced_product_ids(data)
-    
-    # Skip informational advisory for some tests
-    is_informational = document.get("category") == "csaf_informational_advisory"
-    
-    # 6.2.1: Unused Definition of Product ID
-    if not is_informational:
-        _test_6_2_1_unused_product_id(product_ids, referenced_product_ids, errors)
-    
-    # 6.2.2: Missing Remediation for affected/under_investigation
-    _test_6_2_2_missing_remediation(vulnerabilities, group_mappings, errors)
-    
-    # 6.2.3: Missing Metric for affected
-    _test_6_2_3_missing_metric(vulnerabilities, group_mappings, errors)
-    
-    # 6.2.4: Build Metadata in Revision History
-    if "tracking" in document and "revision_history" in document["tracking"]:
-        _test_6_2_4_build_metadata_in_revision(document["tracking"]["revision_history"], errors)
-    
-    # 6.2.5: Older Initial Release Date than Revision History
-    if "tracking" in document:
-        _test_6_2_5_initial_release_older_than_revision(document["tracking"], errors)
-    
-    # 6.2.6: Older Current Release Date than Revision History
-    if "tracking" in document:
-        _test_6_2_6_current_release_older_than_revision(document["tracking"], errors)
-    
-    # 6.2.7: Missing Date in Involvements
-    _test_6_2_7_missing_date_in_involvements(vulnerabilities, errors)
-    
-    # 6.2.8: Use of MD5 as the only Hash Algorithm
-    _test_6_2_8_md5_only_hash(product_tree, errors)
-    
-    # 6.2.9: Use of SHA-1 as the only Hash Algorithm
-    _test_6_2_9_sha1_only_hash(product_tree, errors)
-    
-    # 6.2.11: Missing Canonical URL
-    _test_6_2_11_missing_canonical_url(document, errors)
-    
-    # 6.2.12: Missing Document Language
-    _test_6_2_12_missing_document_language(document, errors)
-    
-    # 6.2.16: Missing Product Identification Helper
-    _test_6_2_16_missing_product_identification_helper(product_tree, errors)
-    
-    # 6.2.17: CVE in field IDs
-    _test_6_2_17_cve_in_ids(vulnerabilities, errors)
-    
-    # 6.2.18: Product Version Range without vers
-    _test_6_2_18_version_range_without_vers(product_tree, errors)
-    
-    # 6.2.19: CVSS for Fixed Products
-    _test_6_2_19_cvss_for_fixed_products(vulnerabilities, errors)
-    
-    # 6.2.21: Same Timestamps in Revision History
-    if "tracking" in document and "revision_history" in document["tracking"]:
-        _test_6_2_21_same_timestamps_in_revision(document["tracking"]["revision_history"], errors)
-    
-    # 6.2.22: Document Tracking ID in Title
-    _test_6_2_22_tracking_id_in_title(document, errors)
-    
-    # 6.2.27: Discouraged Product Status Remediation Combination
-    _test_6_2_27_discouraged_status_remediation(vulnerabilities, group_mappings, errors)
-    
-    # 6.2.28: Usage of Max UUID
-    _test_6_2_28_max_uuid(document, errors)
-    
-    # 6.2.29: Usage of Nil UUID
-    _test_6_2_29_nil_uuid(document, errors)
-    
-    # 6.2.30: Usage of Sharing Group on TLP:CLEAR
-    _test_6_2_30_sharing_group_on_tlp_clear(document, errors)
-    
-    # 6.2.33: Disclosure Date newer than Revision History
-    _test_6_2_33_disclosure_date_newer_than_revision(document, vulnerabilities, errors)
-    
-    # 6.2.34: Usage of Unregistered SSVC Decision Point Namespace
-    _test_6_2_34_unregistered_ssvc_namespace(vulnerabilities, errors)
-    
-    # 6.2.35: Usage of Private SSVC Namespace in TLP:CLEAR
-    _test_6_2_35_private_ssvc_namespace_tlp_clear(document, vulnerabilities, errors)
-    
-    # 6.2.37: Usage of Unknown SSVC Role
-    _test_6_2_37_unknown_ssvc_role(vulnerabilities, errors)
-    
-    # 6.2.38: Usage of Deprecated Profile
-    _test_6_2_38_deprecated_profile(document, errors)
-    
-    # 6.2.41: Old EPSS Timestamp
-    _test_6_2_41_old_epss_timestamp(document, vulnerabilities, errors)
-
-
-# ============ RECOMMENDED TEST IMPLEMENTATIONS (6.2) ============
-
-def _test_6_2_1_unused_product_id(product_ids: Set[str], 
-                                   referenced_ids: Set[str], 
-                                   errors: List[Dict[str, Any]]):
-    """6.2.1: Unused Definition of Product ID"""
-    
-    unused_ids = product_ids - referenced_ids
-    for pid in unused_ids:
-        errors.append({
-            "path": "/product_tree",
-            "message": f"Product ID '{pid}' is defined but never referenced in vulnerabilities",
-            "schema_path": "/product_tree",
-            "severity": "warning",
-            "rule_id": "CSAF-PROD-W001"
-        })
-
-
-def _test_6_2_2_missing_remediation(vulnerabilities: List[Dict], 
-                                     group_mappings: Dict[str, Set[str]],
-                                     errors: List[Dict[str, Any]]):
-    """6.2.2: Missing Remediation for affected/under_investigation products"""
-    
-    affected_statuses = ["first_affected", "known_affected", "last_affected", "under_investigation"]
-    
-    for v_idx, vuln in enumerate(vulnerabilities):
-        if not isinstance(vuln, dict):
-            continue
-        
-        product_status = vuln.get("product_status", {})
-        remediations = vuln.get("remediations", [])
-        
-        # Collect products with remediations
-        products_with_remediation = set()
-        for rem in remediations:
-            if isinstance(rem, dict):
-                if "product_ids" in rem:
-                    products_with_remediation.update(rem["product_ids"])
-                if "group_ids" in rem:
-                    for gid in rem.get("group_ids", []):
-                        if gid in group_mappings:
-                            products_with_remediation.update(group_mappings[gid])
-        
-        # Check each affected status
-        for status in affected_statuses:
-            if status in product_status:
-                for p_idx, pid in enumerate(product_status[status]):
-                    if pid not in products_with_remediation:
-                        errors.append({
-                            "path": f"/vulnerabilities/{v_idx}/product_status/{status}/{p_idx}",
-                            "message": f"Product '{pid}' in '{status}' has no remediation",
-                            "schema_path": f"/vulnerabilities/{v_idx}/product_status/{status}",
-                            "severity": "warning",
-                            "rule_id": "CSAF-VEX-W001"
-                        })
-
-
-def _test_6_2_3_missing_metric(vulnerabilities: List[Dict],
-                                group_mappings: Dict[str, Set[str]],
-                                errors: List[Dict[str, Any]]):
-    """6.2.3: Missing Metric for affected products"""
-    
-    affected_statuses = ["first_affected", "known_affected", "last_affected"]
-    
-    for v_idx, vuln in enumerate(vulnerabilities):
-        if not isinstance(vuln, dict):
-            continue
-        
-        product_status = vuln.get("product_status", {})
-        metrics = vuln.get("metrics", [])
-        
-        # Collect products with metrics
-        products_with_metric = set()
-        for metric in metrics:
-            if isinstance(metric, dict) and "products" in metric:
-                products_with_metric.update(metric["products"])
-        
-        # Check affected statuses
-        for status in affected_statuses:
-            if status in product_status:
-                for p_idx, pid in enumerate(product_status[status]):
-                    if pid not in products_with_metric:
-                        errors.append({
-                            "path": f"/vulnerabilities/{v_idx}/product_status/{status}/{p_idx}",
-                            "message": f"Product '{pid}' in '{status}' has no metric (CVSS/SSVC)",
-                            "schema_path": f"/vulnerabilities/{v_idx}/metrics",
-                            "severity": "warning",
-                            "rule_id": "CSAF-VEX-W002"
-                        })
-
-
-def _test_6_2_4_build_metadata_in_revision(revision_history: List[Dict],
-                                            errors: List[Dict[str, Any]]):
-    """6.2.4: Build Metadata in Revision History"""
-    
-    # Build metadata starts with + (e.g., 1.0.0+exp.sha.ac00785)
-    build_metadata_pattern = re.compile(r'\+')
-    
-    for idx, rev in enumerate(revision_history):
-        if isinstance(rev, dict) and "number" in rev:
-            number = str(rev["number"])
-            if build_metadata_pattern.search(number):
-                errors.append({
-                    "path": f"/document/tracking/revision_history/{idx}/number",
-                    "message": f"Revision number '{number}' contains build metadata",
-                    "schema_path": f"/document/tracking/revision_history/{idx}/number",
-                    "severity": "warning",
-                    "rule_id": "CSAF-TRACK-W001"
-                })
-
-
-def _test_6_2_5_initial_release_older_than_revision(tracking: Dict,
-                                                     errors: List[Dict[str, Any]]):
-    """6.2.5: Older Initial Release Date than Revision History"""
-    
-    if "initial_release_date" not in tracking or "revision_history" not in tracking:
-        return
-    
-    initial_dt = _parse_datetime(tracking["initial_release_date"])
-    if not initial_dt:
-        return
-    
-    revision_history = tracking["revision_history"]
-    if not isinstance(revision_history, list) or len(revision_history) == 0:
-        return
-    
-    # Find oldest revision date
-    oldest_rev_dt = None
-    for rev in revision_history:
-        if isinstance(rev, dict) and "date" in rev:
-            rev_dt = _parse_datetime(rev["date"])
-            if rev_dt:
-                if oldest_rev_dt is None or rev_dt < oldest_rev_dt:
-                    oldest_rev_dt = rev_dt
-    
-    if oldest_rev_dt and initial_dt < oldest_rev_dt:
-        errors.append({
-            "path": "/document/tracking/initial_release_date",
-            "message": f"Initial release date ({tracking['initial_release_date']}) is older than oldest revision ({oldest_rev_dt.isoformat()})",
-            "schema_path": "/document/tracking/initial_release_date",
-            "severity": "warning",
-            "rule_id": "CSAF-TRACK-W002"
-        })
-
-
-def _test_6_2_6_current_release_older_than_revision(tracking: Dict,
-                                                     errors: List[Dict[str, Any]]):
-    """6.2.6: Older Current Release Date than Revision History"""
-    
-    if "current_release_date" not in tracking or "revision_history" not in tracking:
-        return
-    
-    current_dt = _parse_datetime(tracking["current_release_date"])
-    if not current_dt:
-        return
-    
-    revision_history = tracking["revision_history"]
-    if not isinstance(revision_history, list) or len(revision_history) == 0:
-        return
-    
-    # Find newest revision date
-    newest_rev_dt = None
-    for rev in revision_history:
-        if isinstance(rev, dict) and "date" in rev:
-            rev_dt = _parse_datetime(rev["date"])
-            if rev_dt:
-                if newest_rev_dt is None or rev_dt > newest_rev_dt:
-                    newest_rev_dt = rev_dt
-    
-    if newest_rev_dt and current_dt < newest_rev_dt:
-        errors.append({
-            "path": "/document/tracking/current_release_date",
-            "message": f"Current release date ({tracking['current_release_date']}) is older than newest revision ({newest_rev_dt.isoformat()})",
-            "schema_path": "/document/tracking/current_release_date",
-            "severity": "warning",
-            "rule_id": "CSAF-TRACK-W003"
-        })
-
-
-def _test_6_2_7_missing_date_in_involvements(vulnerabilities: List[Dict],
-                                              errors: List[Dict[str, Any]]):
-    """6.2.7: Missing Date in Involvements"""
-    
-    for v_idx, vuln in enumerate(vulnerabilities):
-        if not isinstance(vuln, dict):
-            continue
-        
-        involvements = vuln.get("involvements", [])
-        for i_idx, inv in enumerate(involvements):
-            if isinstance(inv, dict) and "date" not in inv:
-                errors.append({
-                    "path": f"/vulnerabilities/{v_idx}/involvements/{i_idx}",
-                    "message": "Involvement is missing 'date' property",
-                    "schema_path": f"/vulnerabilities/{v_idx}/involvements/{i_idx}/date",
-                    "severity": "warning",
-                    "rule_id": "CSAF-INVOLVE-W001"
-                })
-
-
-def _test_6_2_8_md5_only_hash(product_tree: Dict, errors: List[Dict[str, Any]]):
-    """6.2.8: Use of MD5 as the only Hash Algorithm"""
-    
-    def check_hashes(hashes_list, path):
-        for h_idx, hash_item in enumerate(hashes_list):
-            if isinstance(hash_item, dict) and "file_hashes" in hash_item:
-                file_hashes = hash_item["file_hashes"]
-                if isinstance(file_hashes, list):
-                    algorithms = [fh.get("algorithm", "").lower() for fh in file_hashes if isinstance(fh, dict)]
-                    if algorithms == ["md5"]:
-                        errors.append({
-                            "path": f"{path}/{h_idx}/file_hashes",
-                            "message": "MD5 is the only hash algorithm used (should be accompanied by stronger hash)",
-                            "schema_path": f"{path}/{h_idx}/file_hashes",
-                            "severity": "warning",
-                            "rule_id": "CSAF-HASH-W001"
-                        })
-    
-    _iterate_products_with_helper(product_tree, lambda p, path: 
-        check_hashes(p.get("product_identification_helper", {}).get("hashes", []), 
-                    f"{path}/product_identification_helper/hashes")
-        if "product_identification_helper" in p and "hashes" in p["product_identification_helper"] else None)
-
-
-def _test_6_2_9_sha1_only_hash(product_tree: Dict, errors: List[Dict[str, Any]]):
-    """6.2.9: Use of SHA-1 as the only Hash Algorithm"""
-    
-    def check_hashes(hashes_list, path):
-        for h_idx, hash_item in enumerate(hashes_list):
-            if isinstance(hash_item, dict) and "file_hashes" in hash_item:
-                file_hashes = hash_item["file_hashes"]
-                if isinstance(file_hashes, list):
-                    algorithms = [fh.get("algorithm", "").lower() for fh in file_hashes if isinstance(fh, dict)]
-                    if algorithms == ["sha1"]:
-                        errors.append({
-                            "path": f"{path}/{h_idx}/file_hashes",
-                            "message": "SHA-1 is the only hash algorithm used (should be accompanied by stronger hash)",
-                            "schema_path": f"{path}/{h_idx}/file_hashes",
-                            "severity": "warning",
-                            "rule_id": "CSAF-HASH-W002"
-                        })
-    
-    _iterate_products_with_helper(product_tree, lambda p, path:
-        check_hashes(p.get("product_identification_helper", {}).get("hashes", []),
-                    f"{path}/product_identification_helper/hashes")
-        if "product_identification_helper" in p and "hashes" in p["product_identification_helper"] else None)
-
-
-def _test_6_2_11_missing_canonical_url(document: Dict, errors: List[Dict[str, Any]]):
-    """6.2.11: Missing Canonical URL"""
-    
-    references = document.get("references", [])
-    tracking = document.get("tracking", {})
-    tracking_id = tracking.get("id", "")
-    version = tracking.get("version", "")
-    
-    has_canonical = False
-    for ref in references:
-        if isinstance(ref, dict):
-            category = ref.get("category", "")
-            url = ref.get("url", "")
-            
-            if category == "self" and url.startswith("https://"):
-                # Check if URL ends with valid CSAF filename
-                # Pattern: {id}_{version}.json or {id}.json
-                if url.endswith(".json"):
-                    has_canonical = True
-                    break
-    
-    if not has_canonical:
-        errors.append({
-            "path": "/document/references",
-            "message": "Document is missing canonical URL (self reference with https:// and .json filename)",
-            "schema_path": "/document/references",
-            "severity": "warning",
-            "rule_id": "CSAF-DOC-W001"
-        })
-
-
-def _test_6_2_12_missing_document_language(document: Dict, errors: List[Dict[str, Any]]):
-    """6.2.12: Missing Document Language"""
-    
-    if "lang" not in document or not document["lang"]:
-        errors.append({
-            "path": "/document/lang",
-            "message": "Document language is not defined",
-            "schema_path": "/document/lang",
-            "severity": "warning",
-            "rule_id": "CSAF-DOC-W002"
-        })
-
-
-def _test_6_2_16_missing_product_identification_helper(product_tree: Dict,
-                                                        errors: List[Dict[str, Any]]):
-    """6.2.16: Missing Product Identification Helper"""
-    
-    def check_helper(product, path):
-        if "product_identification_helper" not in product:
-            pid = product.get("product_id", "unknown")
-            errors.append({
-                "path": path,
-                "message": f"Product '{pid}' does not have product_identification_helper",
-                "schema_path": f"{path}/product_identification_helper",
-                "severity": "warning",
-                "rule_id": "CSAF-DOC-W003"
-            })
-    
-    _iterate_products(product_tree, check_helper)
-
-
-def _test_6_2_17_cve_in_ids(vulnerabilities: List[Dict], errors: List[Dict[str, Any]]):
-    """6.2.17: CVE in field IDs"""
-    
-    cve_pattern = re.compile(r'^CVE-\d{4}-\d{4,}$')
-    
-    for v_idx, vuln in enumerate(vulnerabilities):
-        if not isinstance(vuln, dict):
-            continue
-        
-        ids = vuln.get("ids", [])
-        for i_idx, id_item in enumerate(ids):
-            if isinstance(id_item, dict) and "text" in id_item:
-                if cve_pattern.match(id_item["text"]):
-                    errors.append({
-                        "path": f"/vulnerabilities/{v_idx}/ids/{i_idx}",
-                        "message": f"CVE '{id_item['text']}' should be in 'cve' field, not 'ids'",
-                        "schema_path": f"/vulnerabilities/{v_idx}/ids/{i_idx}/text",
-                        "severity": "warning",
-                        "rule_id": "CSAF-DOC-W004"
-                    })
-
-
-def _test_6_2_18_version_range_without_vers(product_tree: Dict,
-                                             errors: List[Dict[str, Any]]):
-    """6.2.18: Product Version Range without vers"""
-    
-    vers_pattern = re.compile(r'^vers:[a-z\.\-\+][a-z0-9\.\-\+]*/.+')
-    
-    def check_branch(branch, path):
-        if branch.get("category") == "product_version_range":
-            name = branch.get("name", "")
-            if not vers_pattern.match(name):
-                errors.append({
-                    "path": f"{path}/name",
-                    "message": f"Version range '{name}' does not conform to vers specification",
-                    "schema_path": f"{path}/name",
-                    "severity": "warning",
-                    "rule_id": "CSAF-DOC-W005"
-                })
-    
-    _iterate_branches(product_tree.get("branches", []), "/product_tree/branches", check_branch)
-
-
-def _test_6_2_19_cvss_for_fixed_products(vulnerabilities: List[Dict],
-                                          errors: List[Dict[str, Any]]):
-    """6.2.19: CVSS for Fixed Products should have environmental score of 0"""
-    
-    for v_idx, vuln in enumerate(vulnerabilities):
-        if not isinstance(vuln, dict):
-            continue
-        
-        product_status = vuln.get("product_status", {})
-        fixed_products = set(product_status.get("fixed", []) + product_status.get("first_fixed", []))
-        
-        if not fixed_products:
-            continue
-        
-        metrics = vuln.get("metrics", [])
-        for m_idx, metric in enumerate(metrics):
-            if not isinstance(metric, dict):
-                continue
-            
-            products = set(metric.get("products", []))
-            fixed_in_metric = fixed_products & products
-            
-            if not fixed_in_metric:
-                continue
-            
-            content = metric.get("content", {})
-            
-            # Check CVSS v3
-            cvss_v3 = content.get("cvss_v3", {})
-            if cvss_v3:
-                env_score = cvss_v3.get("environmentalScore")
-                if env_score is None or env_score != 0:
-                    # Check if environmental modifiers are set
-                    has_modifiers = any(k in cvss_v3 for k in [
-                        "modifiedAvailabilityImpact", 
-                        "modifiedConfidentialityImpact", 
-                        "modifiedIntegrityImpact"
-                    ])
-                    if not has_modifiers:
-                        for pid in fixed_in_metric:
-                            errors.append({
-                                "path": f"/vulnerabilities/{v_idx}/metrics/{m_idx}",
-                                "message": f"Fixed product '{pid}' has CVSS without environmental score of 0",
-                                "schema_path": f"/vulnerabilities/{v_idx}/metrics/{m_idx}/content/cvss_v3",
-                                "severity": "warning",
-                                "rule_id": "CSAF-VEX-W005"
-                            })
-
-
-def _test_6_2_21_same_timestamps_in_revision(revision_history: List[Dict],
-                                              errors: List[Dict[str, Any]]):
-    """6.2.21: Same Timestamps in Revision History"""
-    
-    timestamps = {}
-    for idx, rev in enumerate(revision_history):
-        if isinstance(rev, dict) and "date" in rev:
-            ts = rev["date"]
-            if ts in timestamps:
-                errors.append({
-                    "path": f"/document/tracking/revision_history/{idx}/date",
-                    "message": f"Revision timestamp '{ts}' is same as revision {timestamps[ts]}",
-                    "schema_path": f"/document/tracking/revision_history/{idx}/date",
-                    "severity": "warning",
-                    "rule_id": "CSAF-TRACK-W004"
-                })
-            else:
-                timestamps[ts] = idx
-
-
-def _test_6_2_22_tracking_id_in_title(document: Dict, errors: List[Dict[str, Any]]):
-    """6.2.22: Document Tracking ID in Title"""
-    
-    title = document.get("title", "")
-    tracking = document.get("tracking", {})
-    tracking_id = tracking.get("id", "")
-    
-    if tracking_id and tracking_id in title:
-        errors.append({
-            "path": "/document/title",
-            "message": f"Document title contains tracking ID '{tracking_id}'",
-            "schema_path": "/document/title",
-            "severity": "warning",
-            "rule_id": "CSAF-TRACK-W005"
-        })
-
-
-def _test_6_2_27_discouraged_status_remediation(vulnerabilities: List[Dict],
-                                                  group_mappings: Dict[str, Set[str]],
-                                                  errors: List[Dict[str, Any]]):
-    """6.2.27: Discouraged Product Status Remediation Combination"""
-    
-    for v_idx, vuln in enumerate(vulnerabilities):
-        if not isinstance(vuln, dict):
-            continue
-        
-        product_status = vuln.get("product_status", {})
-        remediations = vuln.get("remediations", [])
-        
-        for status_type, discouraged_categories in DISCOURAGED_STATUS_REMEDIATION.items():
-            if status_type not in product_status:
-                continue
-            
-            status_products = set(product_status[status_type])
-            
-            for r_idx, rem in enumerate(remediations):
-                if not isinstance(rem, dict):
-                    continue
-                
-                category = rem.get("category", "")
-                if category not in discouraged_categories:
-                    continue
-                
-                # Get products in this remediation
-                rem_products = set(rem.get("product_ids", []))
-                for gid in rem.get("group_ids", []):
-                    if gid in group_mappings:
-                        rem_products.update(group_mappings[gid])
-                
-                # Check overlap
-                overlap = status_products & rem_products
-                for pid in overlap:
-                    errors.append({
-                        "path": f"/vulnerabilities/{v_idx}/remediations/{r_idx}",
-                        "message": f"Product '{pid}' in '{status_type}' has discouraged remediation '{category}'",
-                        "schema_path": f"/vulnerabilities/{v_idx}/remediations/{r_idx}",
-                        "severity": "warning",
-                        "rule_id": "CSAF-VEX-W004"
-                    })
-
-
-def _test_6_2_28_max_uuid(document: Dict, errors: List[Dict[str, Any]]):
-    """6.2.28: Usage of Max UUID"""
-    
-    distribution = document.get("distribution", {})
-    sharing_group = distribution.get("sharing_group", {})
-    group_id = sharing_group.get("id", "").lower()
-    
-    if group_id == MAX_UUID:
-        errors.append({
-            "path": "/document/distribution/sharing_group/id",
-            "message": "Sharing group uses Max UUID",
-            "schema_path": "/document/distribution/sharing_group/id",
-            "severity": "warning",
-            "rule_id": "CSAF-UUID-W001"
-        })
-
-
-def _test_6_2_29_nil_uuid(document: Dict, errors: List[Dict[str, Any]]):
-    """6.2.29: Usage of Nil UUID"""
-    
-    distribution = document.get("distribution", {})
-    sharing_group = distribution.get("sharing_group", {})
-    group_id = sharing_group.get("id", "").lower()
-    
-    if group_id == NIL_UUID:
-        errors.append({
-            "path": "/document/distribution/sharing_group/id",
-            "message": "Sharing group uses Nil UUID",
-            "schema_path": "/document/distribution/sharing_group/id",
-            "severity": "warning",
-            "rule_id": "CSAF-UUID-W002"
-        })
-
-
-def _test_6_2_30_sharing_group_on_tlp_clear(document: Dict, errors: List[Dict[str, Any]]):
-    """6.2.30: Usage of Sharing Group on TLP:CLEAR"""
-    
-    distribution = document.get("distribution", {})
-    tlp = distribution.get("tlp", {})
-    label = tlp.get("label", "").upper()
-    
-    if label == "CLEAR" and "sharing_group" in distribution:
-        errors.append({
-            "path": "/document/distribution/sharing_group",
-            "message": "Sharing group is used with TLP:CLEAR",
-            "schema_path": "/document/distribution/sharing_group",
-            "severity": "warning",
-            "rule_id": "CSAF-UUID-W003"
-        })
-
-
-def _test_6_2_33_disclosure_date_newer_than_revision(document: Dict,
-                                                      vulnerabilities: List[Dict],
-                                                      errors: List[Dict[str, Any]]):
-    """6.2.33: Disclosure Date newer than Revision History"""
-    
-    tracking = document.get("tracking", {})
-    revision_history = tracking.get("revision_history", [])
-    
-    if not revision_history:
-        return
-    
-    # Find newest revision date
-    newest_rev_dt = None
-    for rev in revision_history:
-        if isinstance(rev, dict) and "date" in rev:
-            rev_dt = _parse_datetime(rev["date"])
-            if rev_dt:
-                if newest_rev_dt is None or rev_dt > newest_rev_dt:
-                    newest_rev_dt = rev_dt
-    
-    if not newest_rev_dt:
-        return
-    
-    now = datetime.utcnow()
-    
-    for v_idx, vuln in enumerate(vulnerabilities):
-        if not isinstance(vuln, dict):
-            continue
-        
-        disclosure_date_str = vuln.get("disclosure_date")
-        if not disclosure_date_str:
-            continue
-        
-        disclosure_dt = _parse_datetime(disclosure_date_str)
-        if not disclosure_dt:
-            continue
-        
-        # Only check if disclosure date is in the past
-        if disclosure_dt < now and disclosure_dt > newest_rev_dt:
-            errors.append({
-                "path": f"/vulnerabilities/{v_idx}/disclosure_date",
-                "message": f"Disclosure date ({disclosure_date_str}) is newer than newest revision",
-                "schema_path": f"/vulnerabilities/{v_idx}/disclosure_date",
-                "severity": "warning",
-                "rule_id": "CSAF-TRACK-W006"
-            })
-
-
-def _test_6_2_34_unregistered_ssvc_namespace(vulnerabilities: List[Dict],
-                                              errors: List[Dict[str, Any]]):
-    """6.2.34: Usage of Unregistered SSVC Decision Point Namespace"""
-    
-    for v_idx, vuln in enumerate(vulnerabilities):
-        if not isinstance(vuln, dict):
-            continue
-        
-        metrics = vuln.get("metrics", [])
-        for m_idx, metric in enumerate(metrics):
-            if not isinstance(metric, dict):
-                continue
-            
-            content = metric.get("content", {})
-            ssvc = content.get("ssvc_v1", {})
-            selections = ssvc.get("selections", [])
-            
-            for s_idx, sel in enumerate(selections):
-                if isinstance(sel, dict) and "namespace" in sel:
-                    ns = sel["namespace"]
-                    # Check if registered (exact match or starts with registered + "/")
-                    is_registered = any(
-                        ns == reg or ns.startswith(f"{reg}/")
-                        for reg in REGISTERED_SSVC_NAMESPACES
-                    )
-                    # Allow private namespaces (x_)
-                    if not is_registered and not ns.startswith("x_"):
-                        errors.append({
-                            "path": f"/vulnerabilities/{v_idx}/metrics/{m_idx}/content/ssvc_v1/selections/{s_idx}/namespace",
-                            "message": f"SSVC namespace '{ns}' is not registered",
-                            "schema_path": f"/vulnerabilities/{v_idx}/metrics/{m_idx}/content/ssvc_v1/selections/{s_idx}/namespace",
-                            "severity": "warning",
-                            "rule_id": "CSAF-SSVC-W001"
-                        })
-
-
-def _test_6_2_35_private_ssvc_namespace_tlp_clear(document: Dict,
-                                                   vulnerabilities: List[Dict],
-                                                   errors: List[Dict[str, Any]]):
-    """6.2.35: Usage of Private SSVC Namespace in TLP:CLEAR Document"""
-    
-    distribution = document.get("distribution", {})
-    tlp = distribution.get("tlp", {})
-    label = tlp.get("label", "").upper()
-    
-    if label != "CLEAR":
-        return
-    
-    for v_idx, vuln in enumerate(vulnerabilities):
-        if not isinstance(vuln, dict):
-            continue
-        
-        metrics = vuln.get("metrics", [])
-        for m_idx, metric in enumerate(metrics):
-            if not isinstance(metric, dict):
-                continue
-            
-            content = metric.get("content", {})
-            ssvc = content.get("ssvc_v1", {})
-            selections = ssvc.get("selections", [])
-            
-            for s_idx, sel in enumerate(selections):
-                if isinstance(sel, dict) and "namespace" in sel:
-                    ns = sel["namespace"]
-                    if ns.startswith("x_"):
-                        errors.append({
-                            "path": f"/vulnerabilities/{v_idx}/metrics/{m_idx}/content/ssvc_v1/selections/{s_idx}/namespace",
-                            "message": f"Private SSVC namespace '{ns}' used in TLP:CLEAR document",
-                            "schema_path": f"/vulnerabilities/{v_idx}/metrics/{m_idx}/content/ssvc_v1/selections/{s_idx}/namespace",
-                            "severity": "warning",
-                            "rule_id": "CSAF-SSVC-W002"
-                        })
-
-
-def _test_6_2_37_unknown_ssvc_role(vulnerabilities: List[Dict],
-                                    errors: List[Dict[str, Any]]):
-    """6.2.37: Usage of Unknown SSVC Role"""
-    
-    for v_idx, vuln in enumerate(vulnerabilities):
-        if not isinstance(vuln, dict):
-            continue
-        
-        metrics = vuln.get("metrics", [])
-        for m_idx, metric in enumerate(metrics):
-            if not isinstance(metric, dict):
-                continue
-            
-            content = metric.get("content", {})
-            ssvc = content.get("ssvc_v1", {})
-            role = ssvc.get("role")
-            
-            if role and role not in REGISTERED_SSVC_ROLES:
-                errors.append({
-                    "path": f"/vulnerabilities/{v_idx}/metrics/{m_idx}/content/ssvc_v1/role",
-                    "message": f"SSVC role '{role}' is not registered",
-                    "schema_path": f"/vulnerabilities/{v_idx}/metrics/{m_idx}/content/ssvc_v1/role",
-                    "severity": "warning",
-                    "rule_id": "CSAF-SSVC-W003"
-                })
-
-
-def _test_6_2_38_deprecated_profile(document: Dict, errors: List[Dict[str, Any]]):
-    """6.2.38: Usage of Deprecated Profile"""
-    
-    category = document.get("category", "")
-    if category.startswith("csaf_deprecated_"):
-        errors.append({
-            "path": "/document/category",
-            "message": f"Deprecated profile '{category}' used",
-            "schema_path": "/document/category",
-            "severity": "warning",
-            "rule_id": "CSAF-PROFILE-W001"
-        })
-
-
-def _test_6_2_41_old_epss_timestamp(document: Dict,
-                                     vulnerabilities: List[Dict],
-                                     errors: List[Dict[str, Any]]):
-    """6.2.41: Old EPSS Timestamp (more than 15 days older than revision)"""
-    
-    tracking = document.get("tracking", {})
-    status = tracking.get("status", "")
-    
-    # Only check for final or interim
-    if status not in ["final", "interim"]:
-        return
-    
-    revision_history = tracking.get("revision_history", [])
-    if not revision_history:
-        return
-    
-    # Find newest revision date
-    newest_rev_dt = None
-    for rev in revision_history:
-        if isinstance(rev, dict) and "date" in rev:
-            rev_dt = _parse_datetime(rev["date"])
-            if rev_dt:
-                if newest_rev_dt is None or rev_dt > newest_rev_dt:
-                    newest_rev_dt = rev_dt
-    
-    if not newest_rev_dt:
-        return
-    
-    for v_idx, vuln in enumerate(vulnerabilities):
-        if not isinstance(vuln, dict):
-            continue
-        
-        metrics = vuln.get("metrics", [])
-        for m_idx, metric in enumerate(metrics):
-            if not isinstance(metric, dict):
-                continue
-            
-            content = metric.get("content", {})
-            epss = content.get("epss", {})
-            
-            if "timestamp" in epss:
-                epss_dt = _parse_datetime(epss["timestamp"])
-                if epss_dt:
-                    diff = newest_rev_dt - epss_dt
-                    if diff.days > 15:
-                        errors.append({
-                            "path": f"/vulnerabilities/{v_idx}/metrics/{m_idx}/content/epss/timestamp",
-                            "message": f"EPSS timestamp is {diff.days} days older than newest revision (max 15 days)",
-                            "schema_path": f"/vulnerabilities/{v_idx}/metrics/{m_idx}/content/epss/timestamp",
-                            "severity": "warning",
-                            "rule_id": "CSAF-EPSS-W001"
-                        })
-
-
-# ============ VEX PROFILE SPECIFIC TESTS ============
-
-def _validate_vex_profile(data: Dict[str, Any], errors: List[Dict[str, Any]]):
-    """Validate CSAF VEX Profile specific requirements"""
-    
-    document = data.get("document", {})
-    product_tree = data.get("product_tree", {})
-    vulnerabilities = data.get("vulnerabilities", [])
-    
-    product_ids = _collect_product_ids(product_tree)
-    group_mappings = _collect_group_mappings(product_tree)
-    
-    # CSAF-DOC-001: product_tree required
-    if "product_tree" not in data:
-        errors.append({
-            "path": "/",
-            "message": "CSAF VEX Profile requires 'product_tree'",
-            "schema_path": "/product_tree",
-            "severity": "error",
-            "rule_id": "CSAF-DOC-001"
-        })
-        return
-    
-    # CSAF-VULN-REQ-001: vulnerabilities required
-    if "vulnerabilities" not in data:
-        errors.append({
-            "path": "/",
-            "message": "CSAF VEX Profile requires 'vulnerabilities' array",
-            "schema_path": "/vulnerabilities",
-            "severity": "error",
-            "rule_id": "CSAF-DOC-003"
-        })
-        return
-    
-    # CSAF-DOC-002: product_tree must have products
-    if len(product_ids) == 0:
-        errors.append({
-            "path": "/product_tree",
-            "message": "product_tree must contain at least one product definition",
-            "schema_path": "/product_tree",
-            "severity": "error",
-            "rule_id": "CSAF-DOC-002"
-        })
-    
-    # Validate each vulnerability
-    for idx, vuln in enumerate(vulnerabilities):
-        if isinstance(vuln, dict):
-            _validate_vex_vulnerability(vuln, idx, product_ids, group_mappings, errors)
-    
-    # CSAF-VEX-NOTES-001: VEX should have notes
-    for idx, vuln in enumerate(vulnerabilities):
-        if isinstance(vuln, dict):
-            notes = vuln.get("notes", [])
-            if not notes:
-                errors.append({
-                    "path": f"/vulnerabilities/{idx}/notes",
-                    "message": "VEX Profile SHOULD include notes for each vulnerability",
-                    "schema_path": f"/vulnerabilities/{idx}/notes",
-                    "severity": "warning",
-                    "rule_id": "CSAF-VEX-W003"
-                })
-
-
-def _validate_vex_vulnerability(vuln: Dict, idx: int,
-                                 product_ids: Set[str],
-                                 group_mappings: Dict[str, Set[str]],
-                                 errors: List[Dict[str, Any]]):
-    """Validate VEX-specific vulnerability requirements"""
-    
-    path_prefix = f"/vulnerabilities/{idx}"
-    
-    # CSAF-VULNID-001: CVE or IDs required
-    has_cve = "cve" in vuln and vuln["cve"]
-    has_ids = "ids" in vuln and vuln["ids"]
-    
-    if not has_cve and not has_ids:
-        errors.append({
-            "path": path_prefix,
-            "message": "Vulnerability MUST have 'cve' or 'ids'",
-            "schema_path": path_prefix,
-            "severity": "error",
-            "rule_id": "CSAF-VULN-001"
-        })
-    
-    # CSAF-PSTAT-001: product_status required
-    if "product_status" not in vuln:
-        errors.append({
-            "path": path_prefix,
-            "message": "Vulnerability MUST have 'product_status'",
-            "schema_path": f"{path_prefix}/product_status",
-            "severity": "error",
-            "rule_id": "CSAF-VULN-002"
-        })
-        return
-    
-    product_status = vuln["product_status"]
-    
-    # CSAF-PSTAT-002: At least one VEX status
-    vex_statuses = {"fixed", "known_affected", "known_not_affected", "under_investigation"}
-    has_vex_status = any(s in product_status for s in vex_statuses)
-    
-    if not has_vex_status:
-        errors.append({
-            "path": f"{path_prefix}/product_status",
-            "message": f"product_status MUST have at least one VEX status: {', '.join(sorted(vex_statuses))}",
-            "schema_path": f"{path_prefix}/product_status",
-            "severity": "error",
-            "rule_id": "CSAF-STATUS-001"
-        })
-        return
-    
-    # CSAF-PROD-003: Product references must exist
-    _validate_product_references(product_status, path_prefix, product_ids, group_mappings, errors)
-    
-    # CSAF-KNA-001: known_not_affected requires impact statement
-    if "known_not_affected" in product_status:
-        _validate_not_affected_products(vuln, product_status["known_not_affected"],
-                                        path_prefix, group_mappings, errors)
-    
-    # CSAF-KA-001: known_affected requires action statement
-    if "known_affected" in product_status:
-        _validate_affected_products(vuln, product_status["known_affected"],
-                                    path_prefix, group_mappings, errors)
-    
-    # Validate remediation structure
-    for r_idx, rem in enumerate(vuln.get("remediations", [])):
-        if isinstance(rem, dict):
-            _validate_remediation(rem, f"{path_prefix}/remediations/{r_idx}",
-                                 product_ids, group_mappings, errors)
-
-
-# ============ HELPER FUNCTIONS ============
-
-def _collect_product_ids(product_tree: Dict[str, Any]) -> Set[str]:
-    """Collect all product IDs from product tree"""
-    product_ids = set()
-    
-    # From full_product_names
-    for product in product_tree.get("full_product_names", []):
-        if isinstance(product, dict) and "product_id" in product:
-            product_ids.add(product["product_id"])
-    
-    # From branches (recursive)
-    def collect_from_branches(branches):
-        for branch in branches:
-            if isinstance(branch, dict):
-                if "product" in branch and "product_id" in branch["product"]:
-                    product_ids.add(branch["product"]["product_id"])
-                if "branches" in branch:
-                    collect_from_branches(branch["branches"])
-    
-    collect_from_branches(product_tree.get("branches", []))
-    
-    # From relationships
-    for rel in product_tree.get("relationships", []):
-        if isinstance(rel, dict):
-            if "product_reference" in rel:
-                product_ids.add(rel["product_reference"])
-            if "relates_to_product_reference" in rel:
-                product_ids.add(rel["relates_to_product_reference"])
-            if "full_product_name" in rel and "product_id" in rel["full_product_name"]:
-                product_ids.add(rel["full_product_name"]["product_id"])
-    
-    return product_ids
-
-
-def _collect_referenced_product_ids(data: Dict[str, Any]) -> Set[str]:
-    """Collect all product IDs referenced in vulnerabilities"""
-    referenced = set()
-    
-    for vuln in data.get("vulnerabilities", []):
-        if not isinstance(vuln, dict):
-            continue
-        
-        # From product_status
-        product_status = vuln.get("product_status", {})
-        for status_list in product_status.values():
-            if isinstance(status_list, list):
-                referenced.update(status_list)
-        
-        # From remediations
-        for rem in vuln.get("remediations", []):
-            if isinstance(rem, dict):
-                referenced.update(rem.get("product_ids", []))
-        
-        # From flags
-        for flag in vuln.get("flags", []):
-            if isinstance(flag, dict):
-                referenced.update(flag.get("product_ids", []))
-        
-        # From threats
-        for threat in vuln.get("threats", []):
-            if isinstance(threat, dict):
-                referenced.update(threat.get("product_ids", []))
-        
-        # From metrics
-        for metric in vuln.get("metrics", []):
-            if isinstance(metric, dict):
-                referenced.update(metric.get("products", []))
-    
-    return referenced
-
-
-def _collect_group_mappings(product_tree: Dict[str, Any]) -> Dict[str, Set[str]]:
-    """Collect product group ID to product IDs mappings"""
-    mappings = {}
-    
-    for group in product_tree.get("product_groups", []):
-        if isinstance(group, dict) and "group_id" in group and "product_ids" in group:
-            mappings[group["group_id"]] = set(group["product_ids"])
-    
-    return mappings
-
-
-def _validate_product_id_uniqueness(product_tree: Dict, errors: List[Dict[str, Any]]):
-    """6.1.2: Product ID uniqueness"""
-    seen_ids = {}
-    
-    def check_and_add(pid, path):
-        if pid in seen_ids:
-            errors.append({
-                "path": path,
-                "message": f"Product ID '{pid}' is defined multiple times (first at {seen_ids[pid]})",
-                "schema_path": path,
-                "severity": "error",
-                "rule_id": "CSAF-PROD-001"
-            })
-        else:
-            seen_ids[pid] = path
-    
-    # Check full_product_names
-    for idx, product in enumerate(product_tree.get("full_product_names", [])):
-        if isinstance(product, dict) and "product_id" in product:
-            check_and_add(product["product_id"], f"/product_tree/full_product_names/{idx}/product_id")
-    
-    # Check branches
-    def check_branches(branches, path):
-        for idx, branch in enumerate(branches):
-            if isinstance(branch, dict):
-                if "product" in branch and "product_id" in branch["product"]:
-                    check_and_add(branch["product"]["product_id"], f"{path}/{idx}/product/product_id")
-                if "branches" in branch:
-                    check_branches(branch["branches"], f"{path}/{idx}/branches")
-    
-    check_branches(product_tree.get("branches", []), "/product_tree/branches")
-    
-    # Check relationships
-    for idx, rel in enumerate(product_tree.get("relationships", [])):
-        if isinstance(rel, dict) and "full_product_name" in rel:
-            if "product_id" in rel["full_product_name"]:
-                check_and_add(rel["full_product_name"]["product_id"],
-                             f"/product_tree/relationships/{idx}/full_product_name/product_id")
-
-
-def _validate_group_id_uniqueness(product_tree: Dict, errors: List[Dict[str, Any]]):
-    """6.1.5: Product Group ID uniqueness"""
-    seen_ids = {}
-    
-    for idx, group in enumerate(product_tree.get("product_groups", [])):
-        if isinstance(group, dict) and "group_id" in group:
-            gid = group["group_id"]
-            if gid in seen_ids:
-                errors.append({
-                    "path": f"/product_tree/product_groups/{idx}/group_id",
-                    "message": f"Product Group ID '{gid}' is defined multiple times",
-                    "schema_path": f"/product_tree/product_groups/{idx}/group_id",
-                    "severity": "error",
-                    "rule_id": "CSAF-PROD-002"
-                })
-            else:
-                seen_ids[gid] = idx
-
-
-def _validate_revision_history_sorted(revision_history: List[Dict], errors: List[Dict[str, Any]]):
-    """6.1.14: Revision history must be sorted"""
-    
-    if len(revision_history) < 2:
-        return
-    
-    prev_dt = None
-    for idx, rev in enumerate(revision_history):
-        if isinstance(rev, dict) and "date" in rev:
-            curr_dt = _parse_datetime(rev["date"])
-            if curr_dt and prev_dt:
-                if curr_dt < prev_dt:
-                    errors.append({
-                        "path": f"/document/tracking/revision_history/{idx}",
-                        "message": "Revision history is not sorted by date",
-                        "schema_path": f"/document/tracking/revision_history/{idx}",
-                        "severity": "error",
-                        "rule_id": "CSAF-TRACK-001"
-                    })
-                    break
-            prev_dt = curr_dt
-
-
-def _validate_document_status_draft(version: str, status: str, errors: List[Dict[str, Any]]):
-    """6.1.17: Version 0 or 0.x.x must be draft"""
-    
-    is_zero_version = False
-    try:
-        if int(version) == 0:
-            is_zero_version = True
-    except ValueError:
-        if version.startswith("0."):
-            is_zero_version = True
-    
-    if is_zero_version and status != "draft":
-        errors.append({
-            "path": "/document/tracking/status",
-            "message": f"Document status MUST be 'draft' for version {version}",
-            "schema_path": "/document/tracking/status",
-            "severity": "error",
-            "rule_id": "CSAF-TRACK-002"
-        })
-
-
-def _validate_vulnerability_mandatory(vuln: Dict, idx: int,
-                                       product_ids: Set[str],
-                                       group_mappings: Dict[str, Set[str]],
-                                       errors: List[Dict[str, Any]]):
-    """Validate mandatory vulnerability requirements"""
-    
-    # Validate remediation structure
-    for r_idx, rem in enumerate(vuln.get("remediations", [])):
-        if isinstance(rem, dict):
-            _validate_remediation(rem, f"/vulnerabilities/{idx}/remediations/{r_idx}",
-                                 product_ids, group_mappings, errors)
-
-
-def _validate_product_references(product_status: Dict, path_prefix: str,
-                                  product_ids: Set[str],
-                                  group_mappings: Dict[str, Set[str]],
-                                  errors: List[Dict[str, Any]]):
-    """CSAF-PROD-003: Validate product references exist"""
-    
-    for status_type, products in product_status.items():
-        if isinstance(products, list):
-            for p_idx, pid in enumerate(products):
-                if pid not in product_ids and pid not in group_mappings:
-                    errors.append({
-                        "path": f"{path_prefix}/product_status/{status_type}/{p_idx}",
-                        "message": f"Product ID '{pid}' not defined in product_tree",
-                        "schema_path": f"{path_prefix}/product_status/{status_type}",
-                        "severity": "error",
-                        "rule_id": "CSAF-PROD-003"
-                    })
-
-
-def _validate_not_affected_products(vuln: Dict, not_affected_ids: List[str],
-                                     path_prefix: str,
-                                     group_mappings: Dict[str, Set[str]],
-                                     errors: List[Dict[str, Any]]):
-    """CSAF-KNA-001: known_not_affected requires impact statement"""
-    
-    # Collect products with impact from flags
-    products_with_impact = set()
-    
-    for flag in vuln.get("flags", []):
-        if isinstance(flag, dict):
-            products_with_impact.update(flag.get("product_ids", []))
-            for gid in flag.get("group_ids", []):
-                if gid in group_mappings:
-                    products_with_impact.update(group_mappings[gid])
-    
-    # Collect from threats with category="impact"
-    for threat in vuln.get("threats", []):
-        if isinstance(threat, dict) and threat.get("category") == "impact":
-            products_with_impact.update(threat.get("product_ids", []))
-            for gid in threat.get("group_ids", []):
-                if gid in group_mappings:
-                    products_with_impact.update(group_mappings[gid])
-    
-    for pid in not_affected_ids:
-        if pid not in products_with_impact:
-            errors.append({
-                "path": f"{path_prefix}/product_status/known_not_affected",
-                "message": f"Product '{pid}' in known_not_affected has no impact statement (flag or threat)",
-                "schema_path": f"{path_prefix}/product_status/known_not_affected",
-                "severity": "error",
-                "rule_id": "CSAF-VEX-001"
-            })
-
-
-def _validate_affected_products(vuln: Dict, affected_ids: List[str],
-                                 path_prefix: str,
-                                 group_mappings: Dict[str, Set[str]],
-                                 errors: List[Dict[str, Any]]):
-    """CSAF-KA-001: known_affected requires action statement"""
-    
-    products_with_remediation = set()
-    
-    for rem in vuln.get("remediations", []):
-        if isinstance(rem, dict):
-            products_with_remediation.update(rem.get("product_ids", []))
-            for gid in rem.get("group_ids", []):
-                if gid in group_mappings:
-                    products_with_remediation.update(group_mappings[gid])
-    
-    for pid in affected_ids:
-        if pid not in products_with_remediation:
-            errors.append({
-                "path": f"{path_prefix}/product_status/known_affected",
-                "message": f"Product '{pid}' in known_affected has no action statement (remediation)",
-                "schema_path": f"{path_prefix}/product_status/known_affected",
-                "severity": "error",
-                "rule_id": "CSAF-VEX-002"
-            })
-
-
-def _validate_remediation(remediation: Dict, path: str,
-                          product_ids: Set[str],
-                          group_mappings: Dict[str, Set[str]],
-                          errors: List[Dict[str, Any]]):
-    """Validate remediation structure"""
-    
-    # MUST have category
-    if "category" not in remediation:
-        errors.append({
-            "path": path,
-            "message": "Remediation MUST have 'category'",
-            "schema_path": f"{path}/category",
-            "severity": "error",
-            "rule_id": "CSAF-REMED-001"
-        })
-    
-    # MUST have details or url
-    if "details" not in remediation and "url" not in remediation:
-        errors.append({
-            "path": path,
-            "message": "Remediation MUST have 'details' or 'url'",
-            "schema_path": path,
-            "severity": "error",
-            "rule_id": "CSAF-REMED-002"
-        })
-    
-    # MUST have product_ids or group_ids
-    has_products = remediation.get("product_ids") and len(remediation["product_ids"]) > 0
-    has_groups = remediation.get("group_ids") and len(remediation["group_ids"]) > 0
-    
-    if not has_products and not has_groups:
-        errors.append({
-            "path": path,
-            "message": "Remediation MUST have 'product_ids' or 'group_ids'",
-            "schema_path": path,
-            "severity": "error",
-            "rule_id": "CSAF-REMED-003"
-        })
-    
-    # Validate group_ids exist
-    for g_idx, gid in enumerate(remediation.get("group_ids", [])):
-        if gid not in group_mappings:
-            errors.append({
-                "path": f"{path}/group_ids/{g_idx}",
-                "message": f"Group ID '{gid}' not defined in product_groups",
-                "schema_path": f"{path}/group_ids",
-                "severity": "error",
-                "rule_id": "CSAF-GROUP-001"
-            })
-
-
-def _iterate_products(product_tree: Dict, callback):
-    """Iterate over all products in product tree"""
-    
-    # full_product_names
-    for idx, product in enumerate(product_tree.get("full_product_names", [])):
-        if isinstance(product, dict):
-            callback(product, f"/product_tree/full_product_names/{idx}")
-    
-    # branches
-    def iterate_branches(branches, path):
-        for idx, branch in enumerate(branches):
-            if isinstance(branch, dict):
-                if "product" in branch:
-                    callback(branch["product"], f"{path}/{idx}/product")
-                if "branches" in branch:
-                    iterate_branches(branch["branches"], f"{path}/{idx}/branches")
-    
-    iterate_branches(product_tree.get("branches", []), "/product_tree/branches")
-    
-    # relationships
-    for idx, rel in enumerate(product_tree.get("relationships", [])):
-        if isinstance(rel, dict) and "full_product_name" in rel:
-            callback(rel["full_product_name"], f"/product_tree/relationships/{idx}/full_product_name")
-
-
-def _iterate_products_with_helper(product_tree: Dict, callback):
-    """Iterate over products that have product_identification_helper"""
-    
-    def check_product(product, path):
-        if "product_identification_helper" in product:
-            callback(product, path)
-    
-    _iterate_products(product_tree, check_product)
-
-
-def _iterate_branches(branches: List[Dict], path: str, callback):
-    """Iterate over all branches recursively"""
-    
-    for idx, branch in enumerate(branches):
-        if isinstance(branch, dict):
-            callback(branch, f"{path}/{idx}")
-            if "branches" in branch:
-                _iterate_branches(branch["branches"], f"{path}/{idx}/branches", callback)
-
-
-def _parse_datetime(value: str) -> Optional[datetime]:
-    """Parse ISO 8601 datetime"""
-    if not isinstance(value, str):
-        return None
-    
-    formats = [
-        "%Y-%m-%dT%H:%M:%S.%fZ",
-        "%Y-%m-%dT%H:%M:%SZ",
-        "%Y-%m-%dT%H:%M:%S%z",
-        "%Y-%m-%dT%H:%M:%S.%f%z",
-        "%Y-%m-%dT%H:%M:%S.%f",
-        "%Y-%m-%dT%H:%M:%S",
+    validator = CSAFValidator(data, schema)
+    result = validator.validate()
+    
+    return result['valid'], result['errors'], result['version']
+
+
+# UI용 규칙 문서
+VALIDATION_RULES = {
+    'mandatory': [
+        {'id': 'SCHEMA-CSAF-001', 'section': 'Schema', 'desc': 'JSON Schema validation failed'},
+        {'id': 'CSAF-6.1.1', 'section': '6.1.1', 'desc': 'Referenced Product ID not defined in product_tree'},
+        {'id': 'CSAF-6.1.2', 'section': '6.1.2', 'desc': 'Multiple definition of Product ID'},
+        {'id': 'CSAF-6.1.4', 'section': '6.1.4', 'desc': 'Referenced Group ID not defined in product_tree'},
+        {'id': 'CSAF-6.1.5', 'section': '6.1.5', 'desc': 'Multiple definition of Group ID'},
+        {'id': 'CSAF-6.1.6', 'section': '6.1.6', 'desc': 'Contradicting Product Status'},
+        {'id': 'CSAF-6.1.13', 'section': '6.1.13', 'desc': 'Invalid PURL format'},
+        {'id': 'CSAF-6.1.23', 'section': '6.1.23', 'desc': 'Multiple use of same CVE'},
+        {'id': 'CSAF-6.1.29', 'section': '6.1.29', 'desc': 'Remediation without product reference'},
+        {'id': 'CSAF-6.1.32', 'section': '6.1.32', 'desc': 'Flag without product reference'},
+        {'id': 'CSAF-6.1.33', 'section': '6.1.33', 'desc': 'Multiple VEX justification flags per product'},
+    ],
+    'vex_profile': [
+        {'id': 'CSAF-VEX-CAT', 'section': '4.5', 'desc': 'VEX profile category must be "csaf_vex"'},
+        {'id': 'CSAF-6.1.27.4', 'section': '6.1.27.4', 'desc': 'product_tree required'},
+        {'id': 'CSAF-6.1.27.5', 'section': '6.1.27.5', 'desc': 'vulnerabilities[]/notes recommended'},
+        {'id': 'CSAF-6.1.27.7', 'section': '6.1.27.7', 'desc': 'VEX Product Status required'},
+        {'id': 'CSAF-6.1.27.8', 'section': '6.1.27.8', 'desc': 'cve or ids required'},
+        {'id': 'CSAF-6.1.27.9', 'section': '6.1.27.9', 'desc': 'Impact statement required for known_not_affected'},
+        {'id': 'CSAF-6.1.27.10', 'section': '6.1.27.10', 'desc': 'Action statement required for known_affected'},
+        {'id': 'CSAF-6.1.27.11', 'section': '6.1.27.11', 'desc': 'vulnerabilities required'},
     ]
-    
-    test_value = value.replace("+00:00", "Z")
-    
-    for fmt in formats:
-        try:
-            if "Z" in fmt:
-                return datetime.strptime(test_value.replace("Z", "+0000"), fmt.replace("Z", "%z")).replace(tzinfo=None)
-            else:
-                return datetime.strptime(test_value, fmt)
-        except ValueError:
-            continue
-    
-    return None
-
-
-# ============ MAIN ============
-
-def load_schema(schema_path: str) -> Dict[str, Any]:
-    """Load JSON schema from file"""
-    with open(schema_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
-
-
-def load_document(doc_path: str) -> Dict[str, Any]:
-    """Load JSON document from file"""
-    with open(doc_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
-
-
-if __name__ == "__main__":
-    import sys
-    
-    if len(sys.argv) != 3:
-        print("Usage: python csaf_validator_v2.py <schema.json> <document.json>")
-        sys.exit(1)
-    
-    schema = load_schema(sys.argv[1])
-    document = load_document(sys.argv[2])
-    
-    is_valid, errors = validate_csaf(document, schema)
-    
-    error_items = [e for e in errors if e["severity"] == "error"]
-    warning_items = [e for e in errors if e["severity"] == "warning"]
-    
-    if is_valid:
-        print("Valid CSAF document")
-        print("  - JSON Schema: OK")
-        print("  - Mandatory Tests (6.1): OK")
-        print("  - Recommended Tests (6.2): OK" if not warning_items else f"  - Recommended Tests (6.2): {len(warning_items)} warning(s)")
-    else:
-        print("Invalid CSAF document")
-        print(f"\n  Errors ({len(error_items)}):")
-        for error in error_items:
-            print(f"    [{error['rule_id']}] {error['path']}")
-            print(f"      {error['message']}")
-    
-    if warning_items:
-        print(f"\n  Warnings ({len(warning_items)}):")
-        for warning in warning_items:
-            print(f"    [{warning['rule_id']}] {warning['path']}")
-            print(f"      {warning['message']}")
-    
-    sys.exit(0 if is_valid else 1)
+}

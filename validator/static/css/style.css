@@ -19,7 +19,7 @@ body {
 .header {
     background: #ffffff;
     border-bottom: 1px solid #d4c4b0;
-    padding: 10px 0;
+    padding: 20px 0;
 }
 
 .header-content {
@@ -79,13 +79,13 @@ body {
 .container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0px 20px;
+    padding: 32px 20px;
 }
 
 /* ============ HERO SECTION ============ */
 .hero {
     text-align: center;
-    padding: 15px 0;
+    padding: 40px 0;
 }
 
 .hero-logo {
@@ -304,6 +304,7 @@ body {
     cursor: pointer;
     transition: all 0.2s;
     text-align: center;
+    position: relative;
 }
 
 .format-card:hover {
@@ -858,10 +859,7 @@ body {
     margin-top: 6px;
 }
 
-.format-card {
-    position: relative;
-}
-
+/* ============ TARGET FORMAT MAPPING TOOLTIP ============ */
 .mapping-tooltip {
     display: none;
     position: absolute;
@@ -962,7 +960,7 @@ body {
     margin-bottom: 4px;
 }
 
-/* Field mapping display in results */
+/* ============ FIELD MAPPING SECTION (RESULTS) ============ */
 .field-mapping-section {
     margin-top: 20px;
     padding: 16px;
@@ -977,34 +975,16 @@ body {
     margin-bottom: 12px;
 }
 
-.mapping-grid {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    gap: 8px;
-    font-size: 12px;
-}
-
-.mapping-grid .header {
-    font-weight: 600;
-    color: #8b4513;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #d4c4b0;
-}
-
-.mapping-grid .source-col { color: #2e7d32; }
-.mapping-grid .arrow-col { color: #8b4513; text-align: center; }
-.mapping-grid .target-col { color: #1565c0; }
-
 .lost-info {
     margin-top: 16px;
     padding: 12px;
-    background: #fff3e0;
-    border: 1px solid #ffcc80;
+    background: #f5ebe0;
+    border: 1px solid #d4c4b0;
     border-radius: 6px;
 }
 
 .lost-info h5 {
-    color: #e65100;
+    color: #6b3620;
     font-size: 13px;
     margin-bottom: 8px;
 }
@@ -1013,46 +993,9 @@ body {
     margin: 0;
     padding-left: 20px;
     font-size: 12px;
-    color: #bf360c;
-}
-
-/* ============ FIELD MAPPING TABLE (레이아웃 수정) ============ */
-.mapping-table {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    font-size: 12px;
-}
-
-.mapping-table .mapping-row {
-    display: flex;
-    align-items: center;
-    padding: 6px 12px;
-    background: #fff;
-    border-radius: 4px;
-}
-
-.mapping-table .mapping-row.header {
-    background: #f5ebe0;
-    font-weight: 600;
-    color: #6b3620;
-}
-
-.mapping-table .source-col {
-    flex: 1;
-    color: #2e7d32;
-}
-
-.mapping-table .arrow-col {
-    width: 40px;
-    text-align: center;
     color: #8b4513;
 }
 
-.mapping-table .target-col {
-    flex: 1;
-    color: #1565c0;
-}
 
 /* ============ FIELD MAPPING TABLE ============ */
 .mapping-table {
@@ -1090,4 +1033,131 @@ body {
 .mapping-table .target-col {
     flex: 1;
     color: #1565c0;
+}
+
+/* Show All Fields Button */
+.show-all-btn {
+    margin-top: 10px;
+    padding: 8px 16px;
+    background: #d2691e;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+}
+
+.show-all-btn:hover {
+    background: #8b4513;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #fdf8f3;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: #8b4513;
+    color: white;
+}
+
+.modal-header h4 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: #f5deb3;
+}
+
+.modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: calc(80vh - 60px);
+}
+
+.modal-summary {
+    padding: 12px 16px;
+    background: #fff3e0;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    color: #6b3620;
+}
+
+.modal-categories {
+    display: grid;
+    gap: 16px;
+}
+
+.category-section {
+    background: white;
+    border-radius: 6px;
+    padding: 12px 16px;
+    border: 1px solid #e0d5c8;
+}
+
+.category-section h5 {
+    margin: 0 0 10px 0;
+    color: #8b4513;
+    font-size: 14px;
+    border-bottom: 1px solid #e0d5c8;
+    padding-bottom: 6px;
+}
+
+.category-section ul {
+    margin: 0;
+    padding-left: 20px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.category-section li {
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 4px;
+    word-break: break-all;
+}
+
+.category-section li strong {
+    color: #c62828;
+}
+
+.category-section:empty,
+.category-section ul:empty {
+    display: none;
 }
