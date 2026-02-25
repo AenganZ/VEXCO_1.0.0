@@ -8,7 +8,7 @@ VEX 문서의 스키마 및 비즈니스 규칙을 검증하는 Flask 웹 애플
 세 가지 VEX 형식에 대한 통합 검증 도구를 제공한다.
 
 - OpenVEX v0.2.0
-- CycloneDX VEX 1.4 - 1.7
+- CycloneDX VEX 1.5 - 1.7
 - CSAF VEX Profile 2.0 / 2.1
 
 

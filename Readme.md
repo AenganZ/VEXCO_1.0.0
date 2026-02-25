@@ -8,8 +8,8 @@ VEX 문서를 서로 다른 형식으로 변환하는 Python 패키지
 CIM(Common Intermediate Model)을 중간 표현으로 사용하여 세 가지 VEX 형식 간 양방향 변환을 지원한다.
 
 지원 형식
-- OpenVEX v0.2.0
-- CycloneDX VEX 1.4 - 1.7
+- OpenVEX 0.2.0
+- CycloneDX VEX 1.5 - 1.7
 - CSAF VEX Profile 2.0 / 2.1
 - VDR (Vulnerability Disclosure Report)
 
@@ -33,9 +33,9 @@ vex_converter/
 ## 변환 구조
 
 ```
-OpenVEX                              OpenVEX
+OpenVEX                                                      OpenVEX
 CycloneDX   -->  to_cim.py  -->  CIM  -->  from_cim.py  -->  CycloneDX
-CSAF                                 CSAF / VDR
+CSAF                                                         CSAF / VDR
 ```
 
 모든 변환은 CIM을 거쳐 수행된다. 이를 통해 N:N 변환을 N:1 + 1:N 구조로 단순화한다.
