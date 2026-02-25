@@ -1,206 +1,149 @@
-# VEX Converter v1.0.0 - Modular Edition
+# VEX Converter
 
-VEX 형식 간 완벽한 변환을 제공하는 프로덕션급 라이브러리입니다.
+VEX 문서를 서로 다른 형식으로 변환하는 Python 패키지
 
-## 🎯 지원 형식
 
-- **OpenVEX** ↔ **CSAF** ↔ **CycloneDX**
-- 완벽한 양방향 변환
-- 100% 데이터 보존 (reversible 모드)
-- TLP 2.0 ↔ 2.1 자동 변환
+## 개요
 
-## 📦 설치
+CIM(Common Intermediate Model)을 중간 표현으로 사용하여 세 가지 VEX 형식 간 양방향 변환을 지원한다.
 
-```bash
-# 압축 해제
-tar -xzf vex_converter_modular_v1.0.0.tar.gz
+지원 형식
+- OpenVEX v0.2.0
+- CycloneDX VEX 1.4 - 1.7
+- CSAF VEX Profile 2.0 / 2.1
+- VDR (Vulnerability Disclosure Report)
 
-# 사용 준비 완료!
-```
 
-## 🚀 빠른 시작
-
-### CLI 사용
-
-```bash
-# CycloneDX → CSAF
-python convert.py input.json --target CSAF -o output.csaf
-
-# CSAF → OpenVEX
-python convert.py input.csaf --target OpenVEX -o output.vex
-
-# Reversible 변환 (완벽한 복원)
-python convert.py input.json --target CSAF --reversible -o temp.csaf
-python convert.py temp.csaf --target CycloneDX --restore -o restored.json
-```
-
-### Python API
-
-```python
-from vex_converter import (
-    ConversionOptions,
-    CycloneDXToCIM, CIMToCSAF
-)
-
-# CycloneDX → CSAF 변환
-with open('input.json') as f:
-    cyclonedx_data = json.load(f)
-
-# 1단계: CycloneDX → CIM
-cdx_to_cim = CycloneDXToCIM(ConversionOptions())
-cim = cdx_to_cim.convert(cyclonedx_data)
-
-# 2단계: CIM → CSAF
-cim_to_csaf = CIMToCSAF(ConversionOptions())
-csaf_data = cim_to_csaf.convert(cim)
-
-# 저장
-with open('output.csaf', 'w') as f:
-    json.dump(csaf_data, f, indent=2)
-```
-
-## 📁 구조
+## 디렉토리 구조
 
 ```
 vex_converter/
-├── __init__.py          # 패키지 초기화
-├── models.py            # 데이터 모델
-├── utils.py             # 유틸리티
-├── constants.py         # 매핑 테이블
-├── nvd_client.py        # NVD API
-├── to_cim.py            # Format → CIM
-├── from_cim.py          # CIM → Format
-└── validator.py         # 검증
-
-convert.py               # CLI 인터페이스
+  __init__.py       패키지 초기화 및 클래스 export
+  models.py         CIM 데이터 모델 정의
+  constants.py      상수 및 매핑 테이블
+  to_cim.py         소스 형식을 CIM으로 변환
+  from_cim.py       CIM을 타겟 형식으로 변환
+  utils.py          유틸리티 함수
+  validator.py      내부 검증 로직
+  vdr.py            VDR 변환 기능
+  nvd_client.py     NVD API 클라이언트
 ```
 
-## ✨ 주요 기능
 
-### 1. 완벽한 양방향 변환
-```bash
-# 왕복 변환 테스트
-python convert.py input.json --target CSAF -o temp.csaf
-python convert.py temp.csaf --target CycloneDX -o output.json
-# input.json과 output.json이 동일!
+## 변환 구조
+
+```
+OpenVEX                              OpenVEX
+CycloneDX   -->  to_cim.py  -->  CIM  -->  from_cim.py  -->  CycloneDX
+CSAF                                 CSAF / VDR
 ```
 
-### 2. 스키마 완전 준수
-- ✅ CSAF 2.0/2.1
-- ✅ CycloneDX 1.7
-- ✅ OpenVEX
+모든 변환은 CIM을 거쳐 수행된다. 이를 통해 N:N 변환을 N:1 + 1:N 구조로 단순화한다.
 
-### 3. 자동 TLP 변환
-```
-CSAF 2.0 (WHITE) → CIM → CSAF 2.1 (CLEAR)
-```
 
-### 4. CycloneDX Best Practices
-```json
-{
-  "name": "product",
-  "version": "1.0",
-  "versionRange": "vers:generic/>=2.0"
-}
-```
+## 핵심 파일 설명
 
-### 5. CSAF purls 준수
-```json
-{
-  "product_identification_helper": {
-    "purls": ["pkg:npm/..."]
-  }
-}
-```
+### models.py
 
-## 🔧 옵션
+CIM 데이터 구조를 정의한다.
+
+| 클래스 | 설명 |
+|--------|------|
+| CIM | 최상위 문서 모델 |
+| Subject | 제품/컴포넌트 정보 |
+| VEXStatement | 취약점-제품 상태 선언 |
+| Vulnerability | 취약점 메타데이터 |
+| VulnerabilityStatus | 상태값 (AFFECTED, NOT_AFFECTED, FIXED, UNDER_INVESTIGATION) |
+
+### to_cim.py
+
+소스 문서를 파싱하여 CIM 객체를 생성한다.
+
+| 클래스 | 입력 | 출력 |
+|--------|------|------|
+| OpenVEXToCIM | OpenVEX JSON | CIM |
+| CycloneDXToCIM | CycloneDX JSON | CIM |
+| CSAFToCIM | CSAF JSON | CIM |
+
+### from_cim.py
+
+CIM 객체를 타겟 형식으로 직렬화한다.
+
+| 클래스 | 입력 | 출력 |
+|--------|------|------|
+| CIMToOpenVEX | CIM | OpenVEX JSON |
+| CIMToCycloneDX | CIM | CycloneDX JSON |
+| CIMToCSAF | CIM | CSAF JSON |
+
+
+## 사용 예시
+
+### Python 코드에서 사용
 
 ```python
-ConversionOptions(
-    reversible=True,          # 완벽한 복원 가능
-    restore=True,             # 복원 모드
-    consolidate_duplicate_statements=True,
-    enable_nvd_enrichment=True,  # NVD API 사용
-    nvd_api_key="your-key"       # API 키 (선택)
+from vex_converter import (
+    CycloneDXToCIM, CIMToCSAF, ConversionOptions
 )
+
+# 옵션 설정
+options = ConversionOptions(reversible=False)
+
+# CycloneDX를 CSAF로 변환
+cim = CycloneDXToCIM(options).convert(cyclonedx_json)
+csaf = CIMToCSAF(options).convert(cim)
 ```
 
-## 📊 검증
+### CLI에서 사용
 
 ```bash
-# 통합 테스트 실행
-python test_modular_converter.py
-
-# 결과
-✅ CycloneDX → CSAF
-✅ OpenVEX Round-Trip
-✅ TLP 2.0 → 2.1
+python convert.py input.json --target csaf --output result.json
 ```
 
-## 📖 문서
 
-- **MODULARIZATION_COMPLETE.md** - 완전한 모듈 문서
-- **V1.0.0_FINAL_RELEASE.md** - 릴리스 노트
-- **FINAL_DEPLOYMENT_SUMMARY.md** - 배포 가이드
+## 변환 옵션
 
-## 🎯 사용 예시
+| 옵션 | 설명 |
+|------|------|
+| reversible | True시 원본 복원용 메타데이터 보존 |
+| restore | True시 보존된 메타데이터로 원본 복원 시도 |
 
-### 예시 1: SBOM 취약점 분석
+
+## 상태 매핑
+
+| CIM 상태 | OpenVEX | CycloneDX | CSAF |
+|----------|---------|-----------|------|
+| NOT_AFFECTED | not_affected | not_affected | known_not_affected |
+| AFFECTED | affected | exploitable | known_affected |
+| FIXED | fixed | resolved | fixed |
+| UNDER_INVESTIGATION | under_investigation | in_triage | under_investigation |
+
+
+## VDR 변환
+
+VDR은 CycloneDX 형식 기반의 취약점 공개 보고서이다.
+
 ```python
-# SBOM (CycloneDX) 로드
-sbom = load_cyclonedx("sbom.json")
+from vex_converter.vdr import vex_to_vdr
 
-# VEX 정보 추가
-cim = CycloneDXToCIM().convert(sbom)
-# ... VEX 정보 추가 ...
-
-# CSAF로 내보내기
-csaf = CIMToCSAF().convert(cim)
+vdr = vex_to_vdr(cim)
 ```
 
-### 예시 2: 형식 통합
+VDR은 다음 필드에 중점을 둔다.
+- detail (상세 설명)
+- recommendation (권장 조치)
+- workaround (임시 완화책)
+- proofOfConcept (개념 증명)
+- credits (발견자 정보)
+
+
+## NVD API 연동
+
+NVD API를 통해 CVE 정보를 보강할 수 있다.
+
 ```python
-# 여러 소스에서 데이터 수집
-openvex_data = load_openvex("source1.vex")
-cyclonedx_data = load_cyclonedx("source2.json")
+from vex_converter.vdr import enhance_vdr_with_nvd
 
-# 모두 CIM으로 변환
-cim1 = OpenVEXToCIM().convert(openvex_data)
-cim2 = CycloneDXToCIM().convert(cyclonedx_data)
-
-# 통합 후 원하는 형식으로 출력
-merged_cim = merge_cims([cim1, cim2])
-output = CIMToCSAF().convert(merged_cim)
+cim = enhance_vdr_with_nvd(cim, api_key="your-api-key")
 ```
 
-## 🏆 품질 지표
-
-- **스키마 준수**: 100%
-- **데이터 보존**: 95%+
-- **왕복 변환**: 100%
-- **테스트 통과**: 100%
-- **코드 품질**: 95/100
-
-## 📄 라이선스
-
-표준 구현:
-- CSAF 2.0/2.1 (OASIS)
-- CycloneDX 1.7 (OWASP)
-- OpenVEX (OpenSSF)
-
-## 🙏 감사
-
-2개월 인턴십 프로젝트의 결과물입니다.
-
-- VEX 형식 변환 완성
-- 필드 매핑 연구
-- VDR 연관성 분석
-- 자동 판단 시스템
-
----
-
-**버전**: 1.0s.0  
-**상태**: ✅ 프로덕션 준비 완료  
-**모듈화**: ✅ 완료
-
-**Happy Converting!** 🚀
+환경 변수 NVD_API_KEY를 설정하면 자동으로 적용된다.
