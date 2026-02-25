@@ -1566,8 +1566,18 @@ class CIMToCycloneDX:
                     
                     base_refs_in_affects.add(base_ref)
             
+            def collect_all_bom_refs(comps):
+                refs = set()
+                for c in comps:
+                    if c.get("bom-ref"):
+                        refs.add(c["bom-ref"])
+                    if "components" in c:
+                        refs.update(collect_all_bom_refs(c["components"]))
+                return refs
+
             # base ref components가 없으면 추가
-            existing_bom_refs = {c["bom-ref"] for c in components}
+            existing_bom_refs = collect_all_bom_refs(components)
+            
             for base_ref in base_refs_in_affects:
                 if base_ref not in existing_bom_refs:
                     # 이 base ref를 가진 subject 찾기
