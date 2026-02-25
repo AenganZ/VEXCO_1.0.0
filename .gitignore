@@ -4,12 +4,13 @@ test*
 tmp
 .env
 NVD_API_key
-.DS_Store
 
 validator/examples/*
 validator/__pycache__
-validator/.DS_Store
-validator/schema/.DS_Store
 
-vex_converter/.DS_Store
 vex_converter/__pycache__
+
+.DS_Store
+._.DS_Store
+**/.DS_Store
+**/._.DS_Store
