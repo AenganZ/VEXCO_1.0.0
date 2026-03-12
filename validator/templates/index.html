@@ -480,227 +480,201 @@
         const validationRules = {
             openvex: [
                 // ================================================================================
-                // OpenVEX v0.2.0 검증 규칙
+                // OpenVEX v0.2.0 검증 규칙 (통합 네이밍 v2.0)
                 // https://github.com/openvex/spec/blob/main/OPENVEX-SPEC.md
                 // ================================================================================
                 
-                // --- JSON Schema 검증 (MUST) ---
-                { id: 'SCHEMA-OVX-001', severity: 'error', desc: '[MUST] JSON Schema validation failed' },
+                // --- 스키마 검증 ---
+                { id: 'SCHEMA_OPENVEX_001', severity: 'error', desc: '[Schema] JSON Schema validation failed' },
                 
-                // --- 문서 수준 필드 (MUST) ---
-                { id: 'OVX-CTX-001', severity: 'error', desc: '[MUST] @context MUST start with https://openvex.dev/ns/' },
-                { id: 'OVX-ID-001', severity: 'error', desc: '[MUST] @id MUST NOT be empty' },
-                { id: 'OVX-VER-001', severity: 'error', desc: '[MUST] version MUST be >= 1' },
+                // --- 시맨틱 MUST 규칙 ---
+                { id: 'OPENVEX_SEMANTIC_DOC_CONTEXT_FORMAT', severity: 'error', desc: '[MUST] @context MUST start with https://openvex.dev/ns/' },
+                { id: 'OPENVEX_SEMANTIC_DOC_ID_NONEMPTY', severity: 'error', desc: '[MUST] @id MUST NOT be empty' },
+                { id: 'OPENVEX_SEMANTIC_DOC_VERSION_MINIMUM', severity: 'error', desc: '[MUST] version MUST be >= 1' },
+                { id: 'OPENVEX_SEMANTIC_DOC_AUTHOR_IDENTITY', severity: 'error', desc: '[MUST] author MUST identify an individual or organization' },
+                { id: 'OPENVEX_SEMANTIC_STMT_STATUS_NOTAFFECTED_JUSTIFICATION', severity: 'error', desc: '[MUST] not_affected requires justification OR impact_statement' },
+                { id: 'OPENVEX_SEMANTIC_STMT_JUSTIFICATION_INVALID_VALUE', severity: 'error', desc: '[MUST] justification MUST be a valid OpenVEX justification label' },
+                { id: 'OPENVEX_SEMANTIC_STMT_STATUS_AFFECTED_ACTION', severity: 'error', desc: '[MUST] affected requires action_statement' },
+                { id: 'OPENVEX_SEMANTIC_STMT_VULN_NAME_NONEMPTY', severity: 'error', desc: '[MUST] vulnerability name MUST NOT be empty' },
+                { id: 'OPENVEX_SEMANTIC_STMT_PROD_ID_NONEMPTY', severity: 'error', desc: '[MUST] Product @id MUST NOT be empty' },
+                { id: 'OPENVEX_SEMANTIC_STMT_PROD_ADDRESSABLE', severity: 'error', desc: '[MUST] Product MUST be addressable via @id, identifiers, or hashes' },
+                { id: 'OPENVEX_SEMANTIC_STMT_SUBCOMP_ID_NONEMPTY', severity: 'error', desc: '[MUST] subcomponent @id MUST NOT be empty' },
+                { id: 'OPENVEX_SEMANTIC_STMT_COMPLETENESS', severity: 'error', desc: '[MUST] Statement MUST have products, status, vulnerability, and timestamp' },
+                { id: 'OPENVEX_SEMANTIC_CROSS_DUPLICATE_JUSTIFICATION', severity: 'error', desc: '[MUST] Same product cannot have multiple different justifications' },
                 
-                // --- Statement 필드 (MUST) ---
-                { id: 'OVX-STATE-001', severity: 'error', desc: '[MUST] not_affected requires justification OR impact_statement' },
-                { id: 'OVX-STATE-002', severity: 'error', desc: '[MUST] affected requires action_statement' },
-                { id: 'OVX-STATUS-001', severity: 'error', desc: '[MUST] status MUST be valid enum value' },
-                
-                // --- Vulnerability 필드 (MUST) ---
-                { id: 'OVX-VULN-001', severity: 'error', desc: '[MUST] vulnerability MUST have name field' },
-                { id: 'OVX-VULN-002', severity: 'error', desc: '[MUST] vulnerability name MUST NOT be empty' },
-                
-                // --- Product 필드 (MUST) ---
-                { id: 'OVX-PROD-001', severity: 'error', desc: '[MUST] Product MUST have @id field' },
-                { id: 'OVX-PROD-002', severity: 'error', desc: '[MUST] Product @id MUST NOT be empty' },
-                
-                // --- Subcomponent 필드 (MUST) ---
-                { id: 'OVX-SUB-001', severity: 'error', desc: '[MUST] subcomponent MUST have @id field' },
-                
-                // --- 중복 Justification (MUST) ---
-                { id: 'OVX-JUST-DUP-001', severity: 'error', desc: '[MUST] Same product cannot have multiple different justifications' },
-                
-                // --- 권장 사항 (SHOULD) ---
-                { id: 'OVX-TS-001', severity: 'warning', desc: '[SHOULD] timestamp SHOULD be valid ISO 8601 format' },
-                { id: 'OVX-TS-002', severity: 'warning', desc: '[SHOULD] last_updated SHOULD be valid ISO 8601 format' },
-                { id: 'OVX-TS-003', severity: 'warning', desc: '[SHOULD] statement timestamp SHOULD be valid ISO 8601 format' },
-                { id: 'OVX-SHOULD-001', severity: 'warning', desc: '[SHOULD] impact_statement recommended with justification' },
-                { id: 'OVX-SHOULD-002', severity: 'warning', desc: '[SHOULD] Product @id SHOULD use PURL format' },
-                { id: 'OVX-SHOULD-003', severity: 'warning', desc: '[SHOULD] subcomponent @id SHOULD use PURL format' }
+                // --- 시맨틱 SHOULD/RECOMMENDED 규칙 ---
+                { id: 'OPENVEX_SEMANTIC_DOC_AUTHOR_MACHINE_READABLE', severity: 'warning', desc: '[RECOMMENDED] author SHOULD use machine-readable identifier' },
+                { id: 'OPENVEX_SEMANTIC_STMT_NOTAFFECTED_JUSTIFICATION_PREFERRED', severity: 'warning', desc: '[SHOULD] not_affected SHOULD prefer justification label over impact_statement' },
+                { id: 'OPENVEX_SEMANTIC_STMT_NOTAFFECTED_IMPACT_DETAIL', severity: 'warning', desc: '[SHOULD] impact_statement recommended alongside justification' },
+                { id: 'OPENVEX_SEMANTIC_STMT_AFFECTED_ACTION_SPECIFIC', severity: 'warning', desc: '[SHOULD] action_statement SHOULD describe specific mitigation' },
+                { id: 'OPENVEX_SEMANTIC_STMT_PROD_PURL_FORMAT', severity: 'warning', desc: '[RECOMMENDED] Product @id SHOULD use PURL format' },
+                { id: 'OPENVEX_SEMANTIC_STMT_SUBCOMP_PURL_FORMAT', severity: 'warning', desc: '[SHOULD] subcomponent @id SHOULD use PURL format' },
+                { id: 'OPENVEX_SEMANTIC_STMT_VULN_CVE_RECOMMENDED', severity: 'warning', desc: '[SHOULD] vulnerability name SHOULD use CVE ID' },
+                { id: 'OPENVEX_SEMANTIC_TS_DOC_FORMAT', severity: 'warning', desc: '[SHOULD] document timestamp SHOULD be ISO 8601' },
+                { id: 'OPENVEX_SEMANTIC_TS_LASTUPDATED_FORMAT', severity: 'warning', desc: '[SHOULD] last_updated SHOULD be ISO 8601' },
+                { id: 'OPENVEX_SEMANTIC_TS_STMT_FORMAT', severity: 'warning', desc: '[SHOULD] statement timestamp SHOULD be ISO 8601' }
             ],
             cyclonedx: [
                 // ================================================================================
-                // CycloneDX VEX 검증 규칙 v1.0
+                // CycloneDX VEX 검증 규칙 v2.0 (통합 네이밍)
                 // v1.5, v1.6, v1.7 지원 (최소 v1.5 필수)
-                // https://cyclonedx.org/docs/
                 // ================================================================================
                 
-                // --- JSON Schema 검증 (MUST) ---
-                { id: 'SCHEMA-CDX-001', severity: 'error', desc: '[MUST] JSON Schema validation failed' },
+                // --- 스키마 검증 ---
+                { id: 'SCHEMA_CDX_001', severity: 'error', desc: '[Schema] JSON Schema validation failed' },
                 
                 // --- 버전 지원 ---
-                { id: 'CDX-VERSION-UNSUPPORTED', severity: 'error', desc: 'CycloneDX v1.4 and below NOT supported - minimum v1.5 required' },
+                { id: 'CDX_SEMANTIC_DOC_VERSION_UNSUPPORTED', severity: 'error', desc: 'CycloneDX v1.4 and below NOT supported' },
                 
                 // --- BOM 식별자 (SHOULD) ---
-                { id: 'CDX-BOM-001', severity: 'warning', desc: 'serialNumber SHOULD be present for document identification' },
-                { id: 'CDX-BOM-002', severity: 'warning', desc: 'serialNumber SHOULD be in URN UUID format' },
-                { id: 'CDX-BOM-003', severity: 'warning', desc: 'version SHOULD be >= 1' },
+                { id: 'CDX_SEMANTIC_BOM_SERIAL_PRESENT', severity: 'warning', desc: 'serialNumber SHOULD be present' },
+                { id: 'CDX_SEMANTIC_BOM_SERIAL_FORMAT', severity: 'warning', desc: 'serialNumber SHOULD be in URN UUID format' },
+                { id: 'CDX_SEMANTIC_BOM_VERSION_MINIMUM', severity: 'warning', desc: 'version SHOULD be >= 1' },
                 
                 // --- VEX 상태 로직 (MUST) ---
-                { id: 'CDX-VEX-001', severity: 'error', desc: '[MUST] not_affected status requires justification OR detail' },
-                { id: 'CDX-VEX-002', severity: 'error', desc: '[MUST] affected/exploitable status requires response OR detail' },
-                { id: 'CDX-VEX-003', severity: 'warning', desc: 'not_affected with justification SHOULD include detail' },
-                { id: 'CDX-VEX-004', severity: 'warning', desc: 'exploitable status SHOULD have response' },
-                { id: 'CDX-VEX-STATE-001', severity: 'error', desc: '[MUST] analysis.state is REQUIRED' },
-                { id: 'CDX-VEX-STATE-002', severity: 'error', desc: '[MUST] analysis.state MUST be valid enum value' },
-                { id: 'CDX-VEX-JUST-001', severity: 'error', desc: '[MUST] analysis.justification MUST be valid enum value' },
-                { id: 'CDX-VEX-RESP-001', severity: 'warning', desc: 'analysis.response SHOULD be valid enum values' },
-                { id: 'CDX-VEX-ANALYSIS', severity: 'error', desc: '[MUST] VEX vulnerability MUST have analysis section' },
-                { id: 'CDX-VEX-AFFECTS', severity: 'error', desc: '[MUST] vulnerability.affects is REQUIRED and MUST NOT be empty' },
+                { id: 'CDX_SEMANTIC_VEX_NOTAFFECTED_JUSTIFICATION', severity: 'error', desc: '[MUST] not_affected requires justification (v1.7) or justification/detail (v1.5-v1.6)' },
+                { id: 'CDX_SEMANTIC_VEX_JUSTIFICATION_INVALID', severity: 'error', desc: '[MUST] analysis.justification MUST be valid enum value' },
+                { id: 'CDX_SEMANTIC_VEX_NOTAFFECTED_JUSTIFICATION_DETAIL', severity: 'warning', desc: 'not_affected with justification SHOULD include detail' },
+                { id: 'CDX_SEMANTIC_VEX_NOTAFFECTED_DETAIL', severity: 'warning', desc: 'not_affected SHOULD have detail explaining non-impact' },
+                { id: 'CDX_SEMANTIC_VEX_EXPLOITABLE_RESPONSE', severity: 'warning', desc: 'exploitable status SHOULD have response' },
+                { id: 'CDX_SEMANTIC_VEX_STATE_REQUIRED', severity: 'error', desc: '[MUST] analysis.state is REQUIRED' },
+                { id: 'CDX_SEMANTIC_VEX_STATE_INVALID', severity: 'error', desc: '[MUST] analysis.state MUST be valid enum value' },
+                { id: 'CDX_SEMANTIC_VEX_RESPONSE_INVALID', severity: 'warning', desc: 'analysis.response SHOULD be valid enum values' },
+                { id: 'CDX_SEMANTIC_VEX_ANALYSIS_REQUIRED', severity: 'error', desc: '[MUST] VEX vulnerability MUST have analysis section' },
+                { id: 'CDX_SEMANTIC_VEX_AFFECTS_REQUIRED', severity: 'error', desc: '[MUST] vulnerability.affects is REQUIRED' },
                 
                 // --- 참조 무결성 (MUST/SHOULD) ---
-                { id: 'CDX-REF-001', severity: 'error', desc: '[MUST] Duplicate bom-ref values found' },
-                { id: 'CDX-REF-002', severity: 'warning', desc: 'bom-ref SHOULD NOT start with urn:cdx: (BOM-Link conflict)' },
-                { id: 'CDX-REF-003', severity: 'warning', desc: 'Component without type SHOULD be classified as "library"' },
-                { id: 'CDX-REF-004', severity: 'error', desc: '[MUST] affects[].ref is REQUIRED' },
-                { id: 'CDX-REF-005', severity: 'error', desc: '[MUST] affects[].ref MUST NOT be empty' },
-                { id: 'CDX-REF-006', severity: 'error', desc: '[MUST] affects[].ref must reference defined bom-ref' },
-                { id: 'CDX-REF-007', severity: 'error', desc: '[MUST] Product status disjointness - conflicting states' },
+                { id: 'CDX_SEMANTIC_REF_BOMREF_UNIQUE', severity: 'error', desc: '[MUST] bom-ref values MUST be unique' },
+                { id: 'CDX_SEMANTIC_REF_BOMREF_PREFIX', severity: 'warning', desc: 'bom-ref SHOULD NOT start with urn:cdx:' },
+                { id: 'CDX_SEMANTIC_REF_COMPONENT_TYPE', severity: 'warning', desc: 'Component SHOULD have type classification' },
+                { id: 'CDX_SEMANTIC_REF_AFFECTS_REF_REQUIRED', severity: 'error', desc: '[MUST] affects[].ref is REQUIRED' },
+                { id: 'CDX_SEMANTIC_REF_AFFECTS_REF_NONEMPTY', severity: 'error', desc: '[MUST] affects[].ref MUST NOT be empty' },
+                { id: 'CDX_SEMANTIC_REF_AFFECTS_INTEGRITY', severity: 'error', desc: '[MUST] affects[].ref must reference defined bom-ref' },
+                { id: 'CDX_SEMANTIC_VEX_STATUS_DISJOINT', severity: 'error', desc: '[MUST] Product status disjointness' },
                 
-                // --- 타임스탬프 (MUST) ---
-                { id: 'CDX-TS-001', severity: 'error', desc: '[MUST] analysis.firstIssued is REQUIRED' },
-                { id: 'CDX-TS-002', severity: 'error', desc: '[MUST] firstIssued MUST be valid ISO 8601 format' },
-                { id: 'CDX-TS-003', severity: 'error', desc: '[MUST] analysis.lastUpdated is REQUIRED' },
-                { id: 'CDX-TS-004', severity: 'error', desc: '[MUST] lastUpdated MUST be valid ISO 8601 format' },
-                { id: 'CDX-TS-005', severity: 'error', desc: '[MUST] firstIssued cannot be later than lastUpdated' },
+                // --- 타임스탬프 ---
+                { id: 'CDX_SEMANTIC_TS_FIRSTISSUED_PRESENT', severity: 'warning', desc: 'analysis.firstIssued SHOULD be present' },
+                { id: 'CDX_SEMANTIC_TS_FIRSTISSUED_FORMAT', severity: 'error', desc: '[MUST] firstIssued MUST be valid ISO 8601' },
+                { id: 'CDX_SEMANTIC_TS_LASTUPDATED_PRESENT', severity: 'warning', desc: 'analysis.lastUpdated SHOULD be present' },
+                { id: 'CDX_SEMANTIC_TS_LASTUPDATED_FORMAT', severity: 'error', desc: '[MUST] lastUpdated MUST be valid ISO 8601' },
+                { id: 'CDX_SEMANTIC_TS_ORDER_CONSISTENCY', severity: 'error', desc: '[MUST] firstIssued cannot be later than lastUpdated' },
                 
                 // --- 취약점 식별자 (MUST) ---
-                { id: 'CDX-VULN-001', severity: 'error', desc: '[MUST] Vulnerability MUST have an id field' },
-                { id: 'CDX-VULN-002', severity: 'error', desc: '[MUST] Vulnerability id MUST NOT be empty' },
+                { id: 'CDX_SEMANTIC_VULN_ID_REQUIRED', severity: 'error', desc: '[MUST] Vulnerability MUST have an id field' },
+                { id: 'CDX_SEMANTIC_VULN_ID_NONEMPTY', severity: 'error', desc: '[MUST] Vulnerability id MUST NOT be empty' },
                 
                 // --- 버전 항목 ---
-                { id: 'CDX-VER-001', severity: 'error', desc: '[MUST] versions entry MUST have version OR range' },
-                { id: 'CDX-VER-002', severity: 'error', desc: '[MUST] version.status MUST be valid enum value' },
+                { id: 'CDX_SEMANTIC_VER_ENTRY_REQUIRED', severity: 'error', desc: '[MUST] versions entry MUST have version OR range' },
+                { id: 'CDX_SEMANTIC_VER_STATUS_INVALID', severity: 'error', desc: '[MUST] version.status MUST be valid enum value' },
+                { id: 'CDX_SEMANTIC_VER_MUTUAL_EXCLUSION', severity: 'error', desc: '[MUST] version and range MUST NOT coexist' },
                 
                 // --- PURL/CPE 검증 ---
-                { id: 'CDX-PURL-001', severity: 'error', desc: '[MUST] PURL must match valid format (pkg:type/...)' },
-                { id: 'CDX-PURL-002', severity: 'warning', desc: 'PURL SHOULD have name component' },
-                { id: 'CDX-CPE-001', severity: 'error', desc: '[MUST] CPE must start with "cpe:"' },
+                { id: 'CDX_SEMANTIC_ID_PURL_FORMAT', severity: 'error', desc: '[MUST] PURL must match valid format' },
+                { id: 'CDX_SEMANTIC_ID_PURL_NAME', severity: 'warning', desc: 'PURL SHOULD have name component' },
+                { id: 'CDX_SEMANTIC_ID_CPE_FORMAT', severity: 'error', desc: '[MUST] CPE must start with "cpe:"' },
                 
                 // --- v1.6+ 추가 규칙 ---
-                { id: 'CDX-V16-001', severity: 'warning', desc: '[v1.6+] vulnerability ratings SHOULD be provided' },
-                { id: 'CDX-V16-002', severity: 'warning', desc: '[v1.6+] evidence.identity SHOULD be an array' },
+                { id: 'CDX_SEMANTIC_V16_RATINGS_RECOMMENDED', severity: 'warning', desc: '[v1.6+] vulnerability ratings SHOULD be provided' },
+                { id: 'CDX_SEMANTIC_V16_EVIDENCE_ARRAY', severity: 'warning', desc: '[v1.6+] evidence.identity SHOULD be an array' },
                 
                 // --- v1.7 전용 규칙 ---
-                { id: 'CDX-V17-001', severity: 'warning', desc: '[v1.7] machine-learning-model SHOULD have modelCard' },
-                { id: 'CDX-V17-002', severity: 'warning', desc: '[v1.7] data component SHOULD have data object' },
-                { id: 'CDX-V17-003', severity: 'error', desc: '[v1.7] Bundled (isExternal=false) MUST NOT have versionRange' },
-                { id: 'CDX-V17-004', severity: 'warning', desc: '[v1.7] TLP classification recommended' }
+                { id: 'CDX_SEMANTIC_V17_MODELCARD_RECOMMENDED', severity: 'warning', desc: '[v1.7] ML model SHOULD have modelCard' },
+                { id: 'CDX_SEMANTIC_V17_MODELCARD_RESTRICTION', severity: 'error', desc: '[v1.7] modelCard MUST NOT be on non-ML components' },
+                { id: 'CDX_SEMANTIC_V17_DATA_RECOMMENDED', severity: 'warning', desc: '[v1.7] data component SHOULD have data object' },
+                { id: 'CDX_SEMANTIC_V17_TLP_RECOMMENDED', severity: 'warning', desc: '[v1.7] TLP classification recommended' }
             ],
             csaf: [
                 // ================================================================================
-                // CSAF 2.0 검증 규칙 v2.0
-                // 명세서 Section 4 (Profiles), Section 6.1 (Mandatory Tests) 기반
-                // https://docs.oasis-open.org/csaf/csaf/v2.0/csaf-v2.0.html
+                // CSAF 2.0/2.1 검증 규칙 v2.1 (전체 Mandatory Tests)
+                // 6.1.1-6.1.33 (공통), 6.1.34-6.1.55 (v2.1), 6.1.27.1-27.19 (프로필)
                 // ================================================================================
                 
-                // --- JSON Schema 검증 ---
-                { id: 'SCHEMA-CSAF-001', severity: 'error', desc: '[Schema] JSON Schema validation failed' },
+                // --- 스키마 검증 ---
+                { id: 'SCHEMA_CSAF_001', severity: 'error', desc: '[Schema] JSON Schema validation failed' },
                 
-                // ================================================================================
-                // 4.1 CSAF Base 프로필 필수 필드
-                // ================================================================================
-                { id: 'CSAF-BASE-001', severity: 'error', desc: '[4.1] Required CSAF Base field is missing' },
-                { id: 'CSAF-BASE-002', severity: 'error', desc: '[4.1] revision_history is empty' },
-                { id: 'CSAF-BASE-003', severity: 'error', desc: '[4.1] revision_history item requires date' },
-                { id: 'CSAF-BASE-004', severity: 'error', desc: '[4.1] revision_history item requires number' },
-                { id: 'CSAF-BASE-005', severity: 'error', desc: '[4.1] revision_history item requires summary' },
+                // --- 6.1.1~6.1.33 공통 Mandatory Tests ---
+                { id: 'CSAF_SEMANTIC_REF_PRODUCT_ID_DEFINED', severity: 'error', desc: '[6.1.1] Product ID not defined' },
+                { id: 'CSAF_SEMANTIC_REF_PRODUCT_ID_UNIQUE', severity: 'error', desc: '[6.1.2] Duplicate Product ID' },
+                { id: 'CSAF_SEMANTIC_REF_PRODUCT_ID_CIRCULAR', severity: 'error', desc: '[6.1.3] Circular Product ID reference' },
+                { id: 'CSAF_SEMANTIC_REF_GROUP_ID_DEFINED', severity: 'error', desc: '[6.1.4] Group ID not defined' },
+                { id: 'CSAF_SEMANTIC_REF_GROUP_ID_UNIQUE', severity: 'error', desc: '[6.1.5] Duplicate Group ID' },
+                { id: 'CSAF_SEMANTIC_STATUS_CONTRADICTION', severity: 'error', desc: '[6.1.6] Contradicting product status' },
+                { id: 'CSAF_SEMANTIC_SCORE_CVSS_DUPLICATE', severity: 'error', desc: '[6.1.7] Duplicate CVSS score per product' },
+                { id: 'CSAF_SEMANTIC_CVSS_INVALID', severity: 'error', desc: '[6.1.8] Invalid CVSS object' },
+                { id: 'CSAF_SEMANTIC_CVSS_COMPUTATION', severity: 'error', desc: '[6.1.9] Invalid CVSS computation' },
+                { id: 'CSAF_SEMANTIC_CVSS_INCONSISTENT', severity: 'error', desc: '[6.1.10] Inconsistent CVSS' },
+                { id: 'CSAF_SEMANTIC_ID_CWE_FORMAT', severity: 'error', desc: '[6.1.11] Invalid CWE' },
+                { id: 'CSAF_SEMANTIC_DOC_LANG_INVALID', severity: 'error', desc: '[6.1.12] Invalid language code' },
+                { id: 'CSAF_SEMANTIC_ID_PURL_FORMAT', severity: 'error', desc: '[6.1.13] Invalid PURL format' },
+                { id: 'CSAF_SEMANTIC_DOC_REVISION_ORDER', severity: 'error', desc: '[6.1.14] Unsorted revision history' },
+                { id: 'CSAF_SEMANTIC_DOC_TRANSLATOR_LANG', severity: 'error', desc: '[6.1.15] Translator requires source_lang' },
+                { id: 'CSAF_SEMANTIC_DOC_VERSION_MATCH', severity: 'error', desc: '[6.1.16] Version mismatch with revision' },
+                { id: 'CSAF_SEMANTIC_DOC_STATUS_DRAFT', severity: 'error', desc: '[6.1.17] Draft version requires draft status' },
+                { id: 'CSAF_SEMANTIC_DOC_RELEASED_HISTORY', severity: 'error', desc: '[6.1.18] Draft version in released history' },
+                { id: 'CSAF_SEMANTIC_DOC_REVISION_PRERELEASE', severity: 'error', desc: '[6.1.19] Pre-release in revision history' },
+                { id: 'CSAF_SEMANTIC_DOC_VERSION_PRERELEASE', severity: 'error', desc: '[6.1.20] Pre-release in non-draft version' },
+                { id: 'CSAF_SEMANTIC_DOC_REVISION_VERSION_MISSING', severity: 'error', desc: '[6.1.21] Missing version in revision' },
+                { id: 'CSAF_SEMANTIC_DOC_REVISION_VERSION_DUPLICATE', severity: 'error', desc: '[6.1.22] Duplicate version in revision' },
+                { id: 'CSAF_SEMANTIC_VULN_CVE_UNIQUE', severity: 'error', desc: '[6.1.23] Same CVE in multiple vulns' },
+                { id: 'CSAF_SEMANTIC_VULN_INVOLVEMENT_DUPLICATE', severity: 'error', desc: '[6.1.24] Duplicate involvement' },
+                { id: 'CSAF_SEMANTIC_ID_HASH_DUPLICATE', severity: 'error', desc: '[6.1.25] Duplicate hash algorithm' },
+                { id: 'CSAF_SEMANTIC_DOC_CATEGORY_PROHIBITED', severity: 'error', desc: '[6.1.26] Prohibited category name' },
+                { id: 'CSAF_SEMANTIC_DOC_TRANSLATION_SAME_LANG', severity: 'error', desc: '[6.1.28] Same lang and source_lang' },
+                { id: 'CSAF_SEMANTIC_VEX_REMEDIATION_PRODUCT_REF', severity: 'error', desc: '[6.1.29] Remediation without product' },
+                { id: 'CSAF_SEMANTIC_DOC_VERSION_FORMAT_MIXED', severity: 'error', desc: '[6.1.30] Mixed versioning' },
+                { id: 'CSAF_SEMANTIC_PROD_VERSION_RANGE_BRANCH', severity: 'error', desc: '[6.1.31] Version range in product_version' },
+                { id: 'CSAF_SEMANTIC_VEX_FLAG_PRODUCT_REF', severity: 'error', desc: '[6.1.32] Flag without product' },
+                { id: 'CSAF_SEMANTIC_VEX_FLAG_DUPLICATE_PER_PRODUCT', severity: 'error', desc: '[6.1.33] Multiple flags per product' },
                 
-                // ================================================================================
-                // 6.1 Mandatory Tests (일반)
-                // ================================================================================
+                // --- 6.1.34~6.1.55 v2.1 전용 Mandatory Tests ---
+                { id: 'CSAF_SEMANTIC_PROD_BRANCH_DEPTH', severity: 'error', desc: '[v2.1] [6.1.34] Branch depth > 30' },
+                { id: 'CSAF_SEMANTIC_VEX_REMEDIATION_CONTRADICTION', severity: 'error', desc: '[v2.1] [6.1.35] Contradicting remediations' },
+                { id: 'CSAF_SEMANTIC_VEX_STATUS_REMEDIATION_CONTRADICTION', severity: 'error', desc: '[v2.1] [6.1.36] Status-remediation contradiction' },
+                { id: 'CSAF_SEMANTIC_DOC_DATETIME_FORMAT', severity: 'error', desc: '[v2.1] [6.1.37] Invalid date-time format' },
+                { id: 'CSAF_SEMANTIC_DOC_SHARING_MAX_UUID_TLP', severity: 'error', desc: '[v2.1] [6.1.38] Max UUID requires TLP:CLEAR' },
+                { id: 'CSAF_SEMANTIC_DOC_SHARING_CLEAR_UUID', severity: 'error', desc: '[v2.1] [6.1.39] TLP:CLEAR requires Max UUID' },
+                { id: 'CSAF_SEMANTIC_DOC_SHARING_NAME_INVALID', severity: 'error', desc: '[v2.1] [6.1.40] Invalid sharing group name' },
+                { id: 'CSAF_SEMANTIC_DOC_SHARING_NAME_MISSING', severity: 'error', desc: '[v2.1] [6.1.41] Missing sharing group name' },
+                { id: 'CSAF_SEMANTIC_ID_PURL_QUALIFIERS', severity: 'error', desc: '[v2.1] [6.1.42] PURLs differ beyond qualifiers' },
+                { id: 'CSAF_SEMANTIC_PROD_MULTI_STAR_MODEL', severity: 'error', desc: '[v2.1] [6.1.43] Multiple stars in model number' },
+                { id: 'CSAF_SEMANTIC_PROD_MULTI_STAR_SERIAL', severity: 'error', desc: '[v2.1] [6.1.44] Multiple stars in serial number' },
+                { id: 'CSAF_SEMANTIC_VULN_DISCLOSURE_DATE', severity: 'error', desc: '[v2.1] [6.1.45] Inconsistent disclosure date' },
+                { id: 'CSAF_SEMANTIC_SSVC_INVALID', severity: 'error', desc: '[v2.1] [6.1.46] Invalid SSVC' },
+                { id: 'CSAF_SEMANTIC_SSVC_ID_INCONSISTENT', severity: 'error', desc: '[v2.1] [6.1.47] Inconsistent SSVC ID' },
+                { id: 'CSAF_SEMANTIC_SSVC_DECISION_POINTS', severity: 'error', desc: '[v2.1] [6.1.48] SSVC decision points' },
+                { id: 'CSAF_SEMANTIC_SSVC_TIMESTAMP', severity: 'error', desc: '[v2.1] [6.1.49] SSVC timestamp' },
+                { id: 'CSAF_SEMANTIC_PROD_VERSION_RANGE_RULES', severity: 'error', desc: '[v2.1] [6.1.50] Version range rules' },
+                { id: 'CSAF_SEMANTIC_EPSS_TIMESTAMP', severity: 'error', desc: '[v2.1] [6.1.51] EPSS timestamp' },
+                { id: 'CSAF_SEMANTIC_EXPLOITATION_DATE_INCONSISTENT', severity: 'error', desc: '[v2.1] [6.1.52] Exploitation dates' },
+                { id: 'CSAF_SEMANTIC_EXPLOITATION_DATE_ORDER', severity: 'error', desc: '[v2.1] [6.1.53] Exploitation date order' },
+                { id: 'CSAF_SEMANTIC_DOC_LICENSE_EXPRESSION', severity: 'error', desc: '[v2.1] [6.1.54] Invalid license expression' },
+                { id: 'CSAF_SEMANTIC_DOC_LICENSE_TEXT', severity: 'error', desc: '[v2.1] [6.1.55] Missing license text' },
                 
-                // --- 6.1.1 Product ID 정의 누락 ---
-                { id: 'CSAF-6.1.1', severity: 'error', desc: '[6.1.1] Referenced Product ID not defined in product_tree' },
+                // --- 6.1.27 Profile Tests (공통) ---
+                { id: 'CSAF_SEMANTIC_PROFILE_DOC_NOTES', severity: 'error', desc: '[6.1.27.1] Document notes required' },
+                { id: 'CSAF_SEMANTIC_PROFILE_DOC_REFERENCES', severity: 'error', desc: '[6.1.27.2] External reference required' },
+                { id: 'CSAF_SEMANTIC_PROFILE_NO_VULNERABILITIES', severity: 'error', desc: '[6.1.27.3] Vulnerabilities must not exist' },
+                { id: 'CSAF_SEMANTIC_VEX_PRODUCT_TREE_REQUIRED', severity: 'error', desc: '[6.1.27.4] Product tree required' },
+                { id: 'CSAF_SEMANTIC_VEX_VULN_NOTES_RECOMMENDED', severity: 'warning', desc: '[6.1.27.5] Vulnerability notes recommended' },
+                { id: 'CSAF_SEMANTIC_PROFILE_PRODUCT_STATUS', severity: 'error', desc: '[6.1.27.6] Product status required' },
+                { id: 'CSAF_SEMANTIC_VEX_STATUS_REQUIRED', severity: 'error', desc: '[6.1.27.7] VEX product status required' },
+                { id: 'CSAF_SEMANTIC_VEX_VULN_ID_REQUIRED', severity: 'error', desc: '[6.1.27.8] cve or ids required' },
+                { id: 'CSAF_SEMANTIC_VEX_IMPACT_STATEMENT_REQUIRED', severity: 'error', desc: '[6.1.27.9] Impact statement required' },
+                { id: 'CSAF_SEMANTIC_VEX_ACTION_STATEMENT_REQUIRED', severity: 'error', desc: '[6.1.27.10] Action statement required' },
+                { id: 'CSAF_SEMANTIC_VEX_VULNERABILITIES_REQUIRED', severity: 'error', desc: '[6.1.27.11] Vulnerabilities required' },
                 
-                // --- 6.1.2 Product ID 중복 정의 ---
-                { id: 'CSAF-6.1.2', severity: 'error', desc: '[6.1.2] Duplicate Product ID definition' },
-                
-                // --- 6.1.3 Product ID 순환 참조 ---
-                { id: 'CSAF-6.1.3', severity: 'error', desc: '[6.1.3] Circular Product ID reference in relationships' },
-                
-                // --- 6.1.4 Product Group ID 정의 누락 ---
-                { id: 'CSAF-6.1.4', severity: 'error', desc: '[6.1.4] Referenced Product Group ID not defined' },
-                
-                // --- 6.1.5 Product Group ID 중복 정의 ---
-                { id: 'CSAF-6.1.5', severity: 'error', desc: '[6.1.5] Duplicate Product Group ID definition' },
-                
-                // --- 6.1.6 모순되는 Product Status ---
-                { id: 'CSAF-6.1.6', severity: 'error', desc: '[6.1.6] Product in contradicting status groups' },
-                
-                // --- 6.1.7 동일 CVSS 버전 점수 중복 ---
-                { id: 'CSAF-6.1.7', severity: 'error', desc: '[6.1.7] Multiple scores with same CVSS version per product' },
-                
-                // --- 6.1.11 CWE 검증 ---
-                { id: 'CSAF-6.1.11', severity: 'error', desc: '[6.1.11] Invalid CWE ID format' },
-                
-                // --- 6.1.13 PURL 검증 ---
-                { id: 'CSAF-6.1.13', severity: 'error', desc: '[6.1.13] Invalid PURL format' },
-                
-                // --- 6.1.14 revision_history 정렬 ---
-                { id: 'CSAF-6.1.14', severity: 'error', desc: '[6.1.14] Revision history version order mismatch' },
-                
-                // --- 6.1.15 Translator ---
-                { id: 'CSAF-6.1.15', severity: 'error', desc: '[6.1.15] source_lang required when publisher.category is translator' },
-                
-                // --- 6.1.16 최신 문서 버전 ---
-                { id: 'CSAF-6.1.16', severity: 'error', desc: '[6.1.16] Document version does not match latest revision' },
-                
-                // --- 6.1.21 revision_history 버전 누락 ---
-                { id: 'CSAF-6.1.21', severity: 'error', desc: '[6.1.21] Missing version number in revision history' },
-                
-                // --- 6.1.22 revision_history 버전 중복 ---
-                { id: 'CSAF-6.1.22', severity: 'error', desc: '[6.1.22] Duplicate version number in revision history' },
-                
-                // --- 6.1.23 동일 CVE 중복 사용 ---
-                { id: 'CSAF-6.1.23', severity: 'error', desc: '[6.1.23] Same CVE used in multiple vulnerability items' },
-                
-                // --- 6.1.26 금지된 category 이름 ---
-                { id: 'CSAF-6.1.26', severity: 'error', desc: '[6.1.26] Prohibited document category name' },
-                
-                // --- 6.1.29 Remediation에 제품 참조 없음 ---
-                { id: 'CSAF-6.1.29', severity: 'error', desc: '[6.1.29] Remediation without product_ids or group_ids' },
-                
-                // --- 6.1.30 정수/시맨틱 버전 혼용 ---
-                { id: 'CSAF-6.1.30', severity: 'error', desc: '[6.1.30] Mixed integer and semantic versioning' },
-                
-                // --- 6.1.31 product_version에 버전 범위 ---
-                { id: 'CSAF-6.1.31', severity: 'error', desc: '[6.1.31] Version range in product_version branch name' },
-                
-                // --- 6.1.32 Flag에 제품 참조 없음 ---
-                { id: 'CSAF-6.1.32', severity: 'error', desc: '[6.1.32] Flag without product_ids or group_ids' },
-                
-                // --- 6.1.33 VEX justification 플래그 중복 ---
-                { id: 'CSAF-6.1.33', severity: 'error', desc: '[6.1.33] Multiple VEX justification flags per product' },
-                
-                // ================================================================================
-                // 6.1.27 VEX 프로필 전용 Tests (csaf_vex 카테고리일 때만)
-                // ================================================================================
-                
-                // --- 6.1.27.4 Product Tree ---
-                { id: 'CSAF-VEX-PT-001', severity: 'error', desc: '[6.1.27.4] VEX profile requires product_tree' },
-                
-                // --- 6.1.27.5 Vulnerability Notes ---
-                { id: 'CSAF-VEX-NOTES-001', severity: 'error', desc: '[6.1.27.5] VEX profile requires vulnerability notes' },
-                
-                // --- 6.1.27.7 VEX Product Status ---
-                { id: 'CSAF-VEX-STATUS-001', severity: 'error', desc: '[6.1.27.7] VEX requires fixed/known_affected/known_not_affected/under_investigation' },
-                
-                // --- 6.1.27.8 Vulnerability ID ---
-                { id: 'CSAF-VEX-ID-001', severity: 'error', desc: '[6.1.27.8] VEX requires cve or ids' },
-                
-                // --- 6.1.27.9 Impact Statement ---
-                { id: 'CSAF-VEX-IMPACT-001', severity: 'error', desc: '[6.1.27.9] known_not_affected product requires impact statement' },
-                
-                // --- 6.1.27.10 Action Statement ---
-                { id: 'CSAF-VEX-ACTION-001', severity: 'error', desc: '[6.1.27.10] known_affected product requires action statement (remediation)' },
-                
-                // --- 6.1.27.11 Vulnerabilities ---
-                { id: 'CSAF-VEX-VULN-001', severity: 'error', desc: '[6.1.27.11] VEX profile requires vulnerabilities' },
+                // --- 6.1.27 Profile Tests (v2.1 전용) ---
+                { id: 'CSAF_SEMANTIC_PROFILE_AFFECTED_PRODUCTS', severity: 'error', desc: '[v2.1] [6.1.27.12] Affected products required' },
+                { id: 'CSAF_SEMANTIC_PROFILE_CORRESPONDING_AFFECTED', severity: 'error', desc: '[v2.1] [6.1.27.13] Corresponding affected products' },
+                { id: 'CSAF_SEMANTIC_PROFILE_DOC_NOTES_DESC', severity: 'error', desc: '[v2.1] [6.1.27.14] Description note required' },
+                { id: 'CSAF_SEMANTIC_PROFILE_NO_PRODUCT_TREE', severity: 'error', desc: '[v2.1] [6.1.27.15] Product tree must not exist' },
+                { id: 'CSAF_SEMANTIC_PROFILE_REVISION_MIN_TWO', severity: 'error', desc: '[v2.1] [6.1.27.16] Min 2 revision history entries' },
+                { id: 'CSAF_SEMANTIC_PROFILE_WITHDRAWAL_REASONING', severity: 'error', desc: '[v2.1] [6.1.27.17] Withdrawal reasoning' },
+                { id: 'CSAF_SEMANTIC_PROFILE_SUPERSESSION_REASONING', severity: 'error', desc: '[v2.1] [6.1.27.18] Supersession reasoning' },
+                { id: 'CSAF_SEMANTIC_PROFILE_SUPERSEDING_REFERENCE', severity: 'error', desc: '[v2.1] [6.1.27.19] Superseding document ref' },
                 
                 // --- 프로필 정보 ---
-                { id: 'CSAF-PROFILE-INFO', severity: 'info', desc: 'Non-VEX category - validated against CSAF Base profile' }
+                { id: 'CSAF_SEMANTIC_PROFILE_INFO', severity: 'info', desc: 'Non-VEX category - validated against CSAF Base profile' }
             ]
         };
 
