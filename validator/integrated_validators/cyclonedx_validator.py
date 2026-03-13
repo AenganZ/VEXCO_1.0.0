@@ -61,9 +61,9 @@ UUID_V4_PATTERN = re.compile(
 
 # 상태 간 상호 배타 관계
 CONFLICTING_STATES = {
-    'not_affected': ['exploitable', 'affected'],
+    'not_affected': ['exploitable'],
     'exploitable': ['not_affected', 'false_positive'],
-    'false_positive': ['exploitable', 'affected'],
+    'false_positive': ['exploitable'],
     'resolved': ['exploitable']
 }
 
@@ -151,27 +151,58 @@ class CycloneDXValidator:
             return datetime.fromisoformat(timestamp)
         except Exception:
             return None
+        
+    BOM_LINK_PATTERN = re.compile(
+    r'^urn:cdx:(?P<serial>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/(?P<version>[1-9]\d*)#(?P<bom_ref>.+)$'
+)
+
+    def _is_valid_bomlink_format(self, ref: str) -> bool:
+        return bool(self.BOM_LINK_PATTERN.match(ref))
+
+    def _parse_bomlink(self, ref: str):
+        m = self.BOM_LINK_PATTERN.match(ref)
+        if not m:
+            return None
+        return {
+            "serial": m.group("serial"),
+            "version": m.group("version"),
+            "bom_ref": m.group("bom_ref"),
+        }
 
     def _collect_bom_refs(self):
         """컴포넌트와 서비스에서 모든 bom-ref 값 수집"""
-        def collect_from_components(components: List[Dict], path: str = 'components'):
-            for i, comp in enumerate(components):
-                if 'bom-ref' in comp:
-                    ref = comp['bom-ref']
+        def collect_from_components(components: List[Dict]):
+            for comp in components:
+                ref = comp.get('bom-ref')
+                if ref:
                     self.all_bom_refs.add(ref)
                     self.component_bom_refs.add(ref)
                     self.defined_product_ids.add(ref)
-                if 'components' in comp:
-                    collect_from_components(comp['components'], f'{path}[{i}].components')
+                if 'components' in comp and isinstance(comp['components'], list):
+                    collect_from_components(comp['components'])
 
-        if 'components' in self.data:
+        def collect_from_services(services: List[Dict]):
+            for svc in services:
+                ref = svc.get('bom-ref')
+                if ref:
+                    self.all_bom_refs.add(ref)
+                    self.defined_product_ids.add(ref)
+                if 'services' in svc and isinstance(svc['services'], list):
+                    collect_from_services(svc['services'])
+
+        if 'components' in self.data and isinstance(self.data['components'], list):
             collect_from_components(self.data['components'])
 
-        if 'services' in self.data:
-            for i, svc in enumerate(self.data['services']):
-                if 'bom-ref' in svc:
-                    self.all_bom_refs.add(svc['bom-ref'])
-                    self.defined_product_ids.add(svc['bom-ref'])
+        if 'services' in self.data and isinstance(self.data['services'], list):
+            collect_from_services(self.data['services'])
+
+        # metadata.component bom-ref 추가 수집
+        meta_comp = (self.data.get('metadata') or {}).get('component') or {}
+        meta_ref = meta_comp.get('bom-ref')
+        if meta_ref:
+            self.all_bom_refs.add(meta_ref)
+            self.component_bom_refs.add(meta_ref)
+            self.defined_product_ids.add(meta_ref)
 
     # ====================================================================
     # 메인 검증 실행
@@ -652,13 +683,47 @@ class CycloneDXValidator:
 
                 # CDX_SEMANTIC_REF_AFFECTS_INTEGRITY: 참조 무결성 (MUST)
                 # 명세(MUST): "affects[].ref가 참조하는 bom-ref는 반드시 components에 정의되어 있어야 한다"
-                if ref not in self.defined_product_ids:
-                    self._add_error(
-                        'CDX_SEMANTIC_REF_AFFECTS_INTEGRITY',
-                        f'affects[].ref references undefined bom-ref: {ref}',
-                        f'{af_path}.ref',
-                        'All referenced product IDs must be defined in components'
-                    )
+                if ref.startswith('urn:cdx:'):
+                    if not self._is_valid_bomlink_format(ref):
+                        self._add_error(
+                            'CDX_SEMANTIC_REF_AFFECTS_INVALID_URN',
+                            f'affects[].ref is not a valid BOM-Link URN: {ref}',
+                            f'{af_path}.ref',
+                            'BOM-Link references must follow the CycloneDX URN format'
+                        )
+                    else:
+                        parsed = self._parse_bomlink(ref)
+                        if not parsed:
+                            self._add_error(
+                                'CDX_SEMANTIC_REF_AFFECTS_INVALID_URN',
+                                f'affects[].ref is not a valid BOM-Link URN: {ref}',
+                                f'{af_path}.ref',
+                                'BOM-Link references must follow the CycloneDX URN format'
+                            )
+                        else:
+                            serial = self.data.get('serialNumber', '')
+                            bom_version = self.data.get('version')
+
+                            if (
+                                parsed["serial"] == serial and
+                                str(parsed["version"]) == str(bom_version) and
+                                parsed["bom_ref"] and
+                                parsed["bom_ref"] not in self.defined_product_ids
+                            ):
+                                self._add_error(
+                                    'CDX_SEMANTIC_REF_AFFECTS_INTEGRITY',
+                                    f'affects[].ref references undefined local bom-ref via BOM-Link: {ref}',
+                                    f'{af_path}.ref',
+                                    'BOM-Link to the same BOM must resolve to a defined bom-ref'
+                                )
+                else:
+                    if ref not in self.defined_product_ids:
+                        self._add_error(
+                            'CDX_SEMANTIC_REF_AFFECTS_INTEGRITY',
+                            f'affects[].ref references undefined local bom-ref: {ref}',
+                            f'{af_path}.ref',
+                            'Local references MUST point to a component/service defined in the same BOM'
+                        )
 
             # 버전 항목 시맨틱 규칙
             versions = affect.get('versions', [])
@@ -926,6 +991,8 @@ VALIDATION_RULES = {
          'desc': '[MUST] affects[].ref is REQUIRED'},
         {'id': 'CDX_SEMANTIC_REF_AFFECTS_REF_NONEMPTY', 'severity': 'error',
          'desc': '[MUST] affects[].ref MUST NOT be empty'},
+        {'id': 'CDX_SEMANTIC_REF_AFFECTS_INVALID_URN', 'severity': 'error',
+         'desc': '[MUST] affects[].ref BOM-Link URN MUST match CycloneDX format'},
         {'id': 'CDX_SEMANTIC_REF_AFFECTS_INTEGRITY', 'severity': 'error',
          'desc': '[MUST] affects[].ref MUST reference a defined bom-ref'},
         {'id': 'CDX_SEMANTIC_VEX_STATUS_DISJOINT', 'severity': 'error',
