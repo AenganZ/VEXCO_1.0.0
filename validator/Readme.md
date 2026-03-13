@@ -1,4 +1,4 @@
-# Enhanced VEX Validator v2.0
+# VEX Validator v2.0
 
 [![Version](https://img.shields.io/badge/version-2.0-blue.svg)](https://github.com)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
