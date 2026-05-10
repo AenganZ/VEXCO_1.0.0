@@ -30,7 +30,7 @@ except ImportError:
     HAS_JSONSCHEMA = False
 
 # 최소 지원 버전
-MINIMUM_SUPPORTED_VERSION = "1.5"
+MINIMUM_SUPPORTED_VERSION = "1.4"
 
 # 유효한 enum 값
 VALID_STATES = [

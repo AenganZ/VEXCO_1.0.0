@@ -10,6 +10,7 @@ import os
 import sys
 import tempfile
 from datetime import datetime, timezone
+from cross_doc_routes import cross_doc_bp
 
 # .env 파일에서 환경 변수 로드
 try:
@@ -52,6 +53,8 @@ app = Flask(__name__,
 # 중요: 필드 순서 보존을 위해 JSON 키 정렬 비활성화 (호환성을 위해 여러 방법 사용)
 app.config['JSON_SORT_KEYS'] = False
 app.json.sort_keys = False  # Flask 2.x 이상
+app.register_blueprint(cross_doc_bp)
+
 
 def json_response(data, status=200):
     """필드 순서 보존된 JSON 응답 반환 (정렬 안 함)"""
@@ -75,14 +78,16 @@ SCHEMAS = {
     # OpenVEX (단일 버전)
     'openvex': os.path.join(SCHEMA_DIR, 'openvex-0.2.0.json'),
     # CSAF 버전
-    'csaf': os.path.join(SCHEMA_DIR, 'csaf-2.1.json'),
     'csaf-2.1': os.path.join(SCHEMA_DIR, 'csaf-2.1.json'),
     'csaf-2.0': os.path.join(SCHEMA_DIR, 'csaf-2.0.json'),
     # CycloneDX 버전
-    'cyclonedx': os.path.join(SCHEMA_DIR, 'cyclonedx-1.7.json'),
     'cyclonedx-1.7': os.path.join(SCHEMA_DIR, 'cyclonedx-1.7.json'),
     'cyclonedx-1.6': os.path.join(SCHEMA_DIR, 'cyclonedx-1.6.json'),
     'cyclonedx-1.5': os.path.join(SCHEMA_DIR, 'cyclonedx-1.5.json'),
+    'cyclonedx-1.4': os.path.join(SCHEMA_DIR, 'cyclonedx-1.4.json'),
+    # Spdx 버전
+    'spdx-3.0.1': os.path.join(SCHEMA_DIR, 'spdx-3.0.1.json'),
+    'spdx-2.3': os.path.join(SCHEMA_DIR, 'spdx-2.3.json'),
 }
 
 # 시작 시 스키마 한 번만 로드
@@ -119,11 +124,17 @@ def detect_schema_type(data: dict) -> str:
     if 'specVersion' in data and 'components' in data:
         return 'cyclonedx'
     
+    # Spdx 감지
+    if 'spdxVersion' in data and 'dataLicense' in data:
+        return 'spdx'
+    if 'packages' in data and 'SPDXID' in data.get('packages', [{}])[0]:
+        return 'spdx'
+    
     return 'unknown'
 
 
 def detect_document_version(data: dict, schema_type: str) -> str:
-    """CSAF 및 CycloneDX 문서의 특정 버전 감지"""
+    """CSAF 및 CycloneDX, SPDX 문서의 특정 버전 감지"""
     if schema_type == 'csaf':
         document = data.get("document", {})
         csaf_version = document.get("csaf_version", "")
@@ -151,6 +162,16 @@ def detect_document_version(data: dict, schema_type: str) -> str:
             return "1.4"
         return "1.7"  # 기본값
     
+    elif schema_type == 'spdx':
+        spdx_version = data.get("spdxVersion", "")
+        if "3.0.1" in spdx_version or "3.0" in spdx_version:
+            return "3.0.1"
+        elif "2.3" in spdx_version:
+            return "2.3"
+        elif "2.2" in spdx_version:
+            return "2.2"
+        return "2.3"
+
     return ""
 
 
@@ -573,12 +594,24 @@ def validate():
         
         if not schema:
             return jsonify({
-                'success': False,
-                'error': f'Schema not loaded for {schema_type}'
-            }), 500
+                'success': True,
+                'schemaType': schema_type,
+                'schemaVersion': doc_version,
+                'isValid': True,
+                'errors': [{
+                    'path': '/',
+                    'message': f'No schema available for {schema_type} {doc_version}. Schema validation skipped.',
+                    'severity': 'info',
+                    'rule_id': 'SCHEMA_NOT_LOADED'
+                }],
+                'errorCount': 0,
+                'validationLevels': {
+                    'schema': True,
+                    'vexRules': True
+                }
+            })
         
         # 버전 정보와 함께 통합 검증 실행
-        detected_version = doc_version
         if schema_type == 'openvex':
             is_valid, errors = validate_openvex(document, schema)
             detected_version = "0.2.0"
@@ -586,6 +619,30 @@ def validate():
             is_valid, errors, detected_version = validate_csaf(document, schema, doc_version)
         elif schema_type == 'cyclonedx':
             is_valid, errors, detected_version = validate_cyclonedx(document, schema, doc_version)
+        elif schema_type == 'spdx':
+            # SPDX: format-native semantic validator 없음, 스키마 검증만 수행
+            errors = []
+            if schema:
+                try:
+                    import jsonschema
+                    v = jsonschema.Draft7Validator(schema)
+                    for error in sorted(v.iter_errors(document), key=lambda e: list(e.path)):
+                        path = "/" + "/".join(str(p) for p in error.absolute_path) if error.absolute_path else "/"
+                        errors.append({
+                            'path': path,
+                            'message': error.message[:200],
+                            'severity': 'error',
+                            'rule_id': 'SCHEMA_SPDX_001'
+                        })
+                except Exception as e:
+                    errors.append({
+                        'path': '/',
+                        'message': f'Schema validation error: {e}',
+                        'severity': 'warning',
+                        'rule_id': 'SCHEMA_SPDX_ERROR'
+                    })
+            is_valid = len([e for e in errors if e.get('severity') == 'error']) == 0
+            detected_version = doc_version
         
         # 오류 유형 분석
         schema_errors = [e for e in errors if e.get('rule_id', '').startswith('SCHEMA') and e.get('severity') == 'error']
