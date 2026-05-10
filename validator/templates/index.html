@@ -5,156 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VEXCO 1.0</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <style>
-        /* 더 보기/접기 버튼 */
-        .show-all-btn {
-            margin-top: 10px;
-            padding: 8px 16px;
-            background: #8b4513;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: background 0.2s;
-        }
-        .show-all-btn:hover {
-            background: #6b3620;
-        }
-        
-        /* 손실 필드 목록 */
-        #lostList {
-            max-height: none;
-            transition: max-height 0.3s ease;
-        }
-        
-        #lostList li {
-            margin-bottom: 6px;
-            line-height: 1.4;
-            word-break: break-all;
-        }
-        
-        #lostList li strong {
-            color: #6b3620;
-        }
-        
-        /* 필드 매핑 뷰어 */
-        #fieldMappingsReference {
-            display: none;
-        }
-        #fieldMappingsReference.show {
-            display: block;
-        }
-        
-        .conversion-path {
-            background: #f5ebe0;
-            color: #6b3620;
-            padding: 15px 20px;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 20px;
-            border: 1px solid #d4c4b0;
-        }
-        
-        .mapping-section {
-            margin-bottom: 20px;
-            border: 1px solid #d4c4b0;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        
-        .mapping-section h4 {
-            background: #f5ebe0;
-            margin: 0;
-            padding: 12px 16px;
-            font-size: 14px;
-            color: #6b3620;
-            border-bottom: 1px solid #d4c4b0;
-        }
-        
-        .mapping-table-detail {
-            padding: 0;
-        }
-        
-        .mapping-row-detail {
-            display: grid;
-            grid-template-columns: 1fr 30px 1fr;
-            padding: 10px 16px;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 13px;
-            align-items: center;
-        }
-        
-        /* 4열 그리드 (런타임 매핑용) */
-        .mapping-row-detail.runtime {
-            grid-template-columns: 1.2fr 30px 1fr 80px;
-        }
-        
-        .mapping-row-detail:last-child {
-            border-bottom: none;
-        }
-        
-        .mapping-row-detail:hover {
-            background: #fafafa;
-        }
-        
-        .mapping-row-detail.header {
-            background: #f9f9f9;
-            font-weight: bold;
-            color: #666;
-        }
-        
-        .mapping-row-detail .source-field {
-            color: #1565c0;
-            font-family: 'Monaco', 'Consolas', monospace;
-            font-size: 12px;
-            word-break: break-all;
-        }
-        
-        .mapping-row-detail .arrow {
-            text-align: center;
-            color: #999;
-        }
-        
-        .mapping-row-detail .target-field {
-            color: #2e7d32;
-            font-family: 'Monaco', 'Consolas', monospace;
-            font-size: 12px;
-            word-break: break-all;
-        }
-        
-        .value-mapping-row {
-            display: grid;
-            grid-template-columns: 1fr 30px 1fr;
-            padding: 8px 16px;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 13px;
-            align-items: center;
-        }
-        
-        .value-mapping-row:hover {
-            background: #fafafa;
-        }
-        
-        .value-mapping-row .source-val {
-            color: #1565c0;
-            font-family: 'Monaco', 'Consolas', monospace;
-        }
-        
-        .value-mapping-row .target-val {
-            color: #2e7d32;
-            font-family: 'Monaco', 'Consolas', monospace;
-        }
-        
-        .no-mapping {
-            padding: 16px;
-            color: #999;
-            text-align: center;
-            font-style: italic;
-        }
-    </style>
 </head>
 <body>
     <!-- Header -->
@@ -185,92 +35,250 @@
             <button class="tab-btn" data-tab="converter">Converter</button>
         </div>
 
-        <!-- ============ VALIDATOR TAB ============ -->
+        <!-- ============ VALIDATOR TAB ============ -->    
         <div id="validator" class="tab-content active">
-            <div class="card">
-                <div class="card-title">
-                    Upload Document
-                    <span class="badge">JSON</span>
-                </div>
-                
-                <div class="alert alert-info">
-                    Upload your JSON file and the format will be automatically detected.
-                </div>
+            <div class="validator-subtabs">
+                <button class="subtab-btn active" data-subtab="singleValidation">Single Validation</button>
+                <button class="subtab-btn" data-subtab="crossValidation">Cross Validation</button>
+            </div>
 
-                <div class="file-upload-area" id="validatorUploadArea">
-                    <div class="upload-icon">&#128196;</div>
-                    <div class="upload-text">
-                        <strong>Click to select file</strong> or drag and drop here
+            <!-- ======================================================= -->
+            <!-- SINGLE VALIDATION -->
+            <!-- ======================================================= -->
+            <div id="singleValidation" class="subtab-content active">
+
+                <div class="card">
+                    <div class="card-title">
+                        Upload Document
+                        <span class="badge">JSON</span>
                     </div>
-                    <div class="upload-hint">JSON files only (OpenVEX, CSAF, CycloneDX)</div>
-                    <input type="file" id="validatorFileInput" class="file-input" accept=".json,application/json">
+                    
+                    <div class="alert alert-info">
+                        Upload your JSON file and the format will be automatically detected.
+                    </div>
+
+                    <div class="file-upload-area" id="validatorUploadArea">
+                        <div class="upload-icon">&#128196;</div>
+                        <div class="upload-text">
+                            <strong>Click to select file</strong> or drag and drop here
+                        </div>
+                        <div class="upload-hint">JSON files only (OpenVEX, CSAF, CycloneDX)</div>
+                        <input type="file" id="validatorFileInput" class="file-input" accept=".json,application/json">
+                    </div>
+
+                    <div class="file-info" id="validatorFileInfo">
+                        <div class="file-details">
+                            <div class="file-icon">&#128196;</div>
+                            <div>
+                                <div class="file-name" id="validatorFileName"></div>
+                                <div class="file-size" id="validatorFileSize"></div>
+                            </div>
+                        </div>
+                        <button class="file-remove" id="validatorClearBtn">&times;</button>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn btn-secondary" id="showRulesBtn">View Rules</button>
+                        <button class="btn btn-primary" id="validateBtn" disabled>Validate</button>
+                    </div>
                 </div>
 
-                <div class="file-info" id="validatorFileInfo">
-                    <div class="file-details">
-                        <div class="file-icon">&#128196;</div>
-                        <div>
-                            <div class="file-name" id="validatorFileName"></div>
-                            <div class="file-size" id="validatorFileSize"></div>
+                <!-- Detected Format -->
+                <div class="card">
+                    <div class="card-title">Detected Format</div>
+                    <div class="format-grid format-grid-4">
+                        <div class="format-card" data-format="openvex" id="detectOpenvex">
+                            <div class="format-icon">VEX</div>
+                            <div class="format-name">OpenVEX</div>
+                            <span class="format-version">x</span>
+                        </div>
+                        <div class="format-card" data-format="cyclonedx" id="detectCyclonedx">
+                            <div class="format-icon">CDX</div>
+                            <div class="format-name">CycloneDX</div>
+                            <span class="format-version">x</span>
+                        </div>
+                        <div class="format-card" data-format="csaf" id="detectCsaf">
+                            <div class="format-icon">CSAF</div>
+                            <div class="format-name">CSAF</div>
+                            <span class="format-version">x</span>
+                        </div>
+                        <div class="format-card" data-format="spdx" id="detectSpdx">
+                            <div class="format-icon">SPX</div>
+                            <div class="format-name">SPDX</div>
+                            <span class="format-version">x</span>
                         </div>
                     </div>
-                    <button class="file-remove" id="validatorClearBtn">&times;</button>
                 </div>
-
-                <div class="button-group">
-                    <button class="btn btn-secondary" id="showRulesBtn">View Rules</button>
-                    <button class="btn btn-primary" id="validateBtn" disabled>Validate</button>
-                </div>
-            </div>
-
-            <!-- Detected Format -->
-            <div class="card">
-                <div class="card-title">Detected Format</div>
-                <div class="format-grid">
-                    <div class="format-card" data-format="openvex" id="detectOpenvex">
-                        <div class="format-icon">VEX</div>
-                        <div class="format-name">OpenVEX</div>
-                        <span class="format-version">x</span>
+ 
+                <!-- Rule Reference (collapsible) -->
+                <div class="card rule-reference" id="ruleReference">
+                    <div class="card-title">
+                        Validation Rules Reference
+                        <button class="btn btn-secondary" id="hideRulesBtn" style="margin-left: auto; padding: 6px 12px;">Close</button>
                     </div>
-                    <div class="format-card" data-format="csaf" id="detectCsaf">
-                        <div class="format-icon">CSAF</div>
-                        <div class="format-name">CSAF</div>
-                        <span class="format-version">x</span>
+                    <div id="ruleCategories"></div>
+                </div>
+ 
+                <!-- Loading -->
+                <div class="card loading" id="validatorLoading">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Validating document...</div>
+                </div>
+ 
+                <!-- Results -->
+                <div class="card results-section" id="validatorResults">
+                    <div class="result-header">
+                        <div class="result-status" id="resultStatus">
+                            <span class="status-icon" id="statusIcon"></span>
+                            <span id="statusText"></span>
+                        </div>
+                        <div class="validation-badges" id="validationBadges"></div>
                     </div>
-                    <div class="format-card" data-format="cyclonedx" id="detectCyclonedx">
-                        <div class="format-icon">CDX</div>
-                        <div class="format-name">CycloneDX</div>
-                        <span class="format-version">x</span>
+                    <div id="resultContent"></div>
+                </div>
+ 
+            </div><!-- /singleValidation -->
+
+            <!-- ======================================================= -->
+            <!-- CROSS VALIDATION -->
+            <!-- ======================================================= -->
+            <div id="crossValidation" class="subtab-content">
+ 
+                <div class="cross-upload-grid">
+                    <!-- BOM -->
+                    <div class="card">
+                        <div class="card-title">
+                            BOM Document
+                            <span class="upload-label bom-req">REQUIRED</span>
+                        </div>
+                        <div class="file-upload-area" id="crossBomUploadArea">
+                            <div class="upload-icon">&#128196;</div>
+                            <div class="upload-text"><strong>Click to select file</strong> or drag and drop</div>
+                            <div class="upload-hint">CycloneDX SBOM or SPDX</div>
+                            <input type="file" id="crossBomFileInput" class="file-input" accept=".json,application/json">
+                        </div>
+                        <div class="file-info" id="crossBomFileInfo">
+                            <div class="file-details">
+                                <div class="file-icon">&#128196;</div>
+                                <div>
+                                    <div class="file-name" id="crossBomFileName"></div>
+                                    <div class="file-size" id="crossBomFileSize"></div>
+                                </div>
+                            </div>
+                            <button class="file-remove" id="crossBomClearBtn">&times;</button>
+                        </div>
+                    </div>
+                    
+                    <!-- VEX -->
+                    <div class="card">
+                        <div class="card-title">
+                            VEX Document
+                            <span class="upload-label vex-req">REQUIRED</span>
+                        </div>
+                        <div class="file-upload-area" id="crossVexUploadArea">
+                            <div class="upload-icon">&#128196;</div>
+                            <div class="upload-text"><strong>Click to select file</strong> or drag and drop</div>
+                            <div class="upload-hint">OpenVEX, CSAF, or CycloneDX VEX</div>
+                            <input type="file" id="crossVexFileInput" class="file-input" accept=".json,application/json">
+                        </div>
+                        <div class="file-info" id="crossVexFileInfo">
+                            <div class="file-details">
+                                <div class="file-icon">&#128196;</div>
+                                <div>
+                                    <div class="file-name" id="crossVexFileName"></div>
+                                    <div class="file-size" id="crossVexFileSize"></div>
+                                </div>
+                            </div>
+                            <button class="file-remove" id="crossVexClearBtn">&times;</button>
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Rule Reference (collapsible) -->
-            <div class="card rule-reference" id="ruleReference">
-                <div class="card-title">
-                    Validation Rules Reference
-                    <button class="btn btn-secondary" id="hideRulesBtn" style="margin-left: auto; padding: 6px 12px;">Close</button>
-                </div>
-                <div id="ruleCategories"></div>
-            </div>
-
-            <!-- Loading -->
-            <div class="card loading" id="validatorLoading">
-                <div class="spinner"></div>
-                <div class="loading-text">Validating document...</div>
-            </div>
-
-            <!-- Results -->
-            <div class="card results-section" id="validatorResults">
-                <div class="result-header">
-                    <div class="result-status" id="resultStatus">
-                        <span class="status-icon" id="statusIcon"></span>
-                        <span id="statusText"></span>
+ 
+                <!-- Detected Formats + Cross Validate -->
+                <div class="card">
+                    <div class="card-title">Detected Formats</div>
+                    <div class="cross-format-row">
+                        <span class="cross-format-label">VEX</span>
+                        <div class="cross-format-cards">
+                            <span class="cross-fmt-chip" id="crossDetVex">OpenVEX <span class="chip-ver"></span></span>
+                            <span class="cross-fmt-chip" id="crossDetCsaf">CSAF <span class="chip-ver"></span></span>
+                            <span class="cross-fmt-chip" id="crossDetCdx">CycloneDX <span class="chip-ver"></span></span>
+                        </div>
                     </div>
-                    <div class="validation-badges" id="validationBadges"></div>
+                    <div class="cross-format-row">
+                        <span class="cross-format-label">BOM</span>
+                        <div class="cross-format-cards">
+                            <span class="cross-fmt-chip" id="crossDetCdxBom">CycloneDX <span class="chip-ver"></span></span>
+                            <span class="cross-fmt-chip" id="crossDetSpdx">SPDX <span class="chip-ver"></span></span>
+                        </div>
+                    </div>
+                    <div class="cross-validate-actions">
+                        <button class="btn btn-primary btn-cross-validate" id="crossValidateBtn" disabled>Cross Validate</button>
+                    </div>
                 </div>
-                <div id="resultContent"></div>
-            </div>
+ 
+                <div class="card loading" id="crossLoading">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Running cross-document validation...</div>
+                </div>
+ 
+                <div class="card results-section" id="crossResults">
+                    <!-- Final Verdict -->
+                    <div style="text-align:center; padding:20px 0; border-bottom:1px solid #d4c4b0; margin-bottom:16px;">
+                        <div style="font-size:13px; font-weight:700; color:#6b3620; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px;">Final Verdict</div>
+                        <div class="final-verdict-badge" id="cvBadge"></div>
+                        <ul class="verdict-reasons" id="cvReasons"></ul>
+                    </div>
+                    
+                    <!-- Match Statistics -->
+                    <div class="cross-section expanded">
+                        <div class="cross-section-header" onclick="this.parentElement.classList.toggle('expanded')">
+                            <span>Match Statistics</span><span class="toggle-arrow">&#9660;</span>
+                        </div>
+                        <div class="cross-section-body">
+                            <div class="match-stats-grid" id="cvStatsGrid"></div>
+                            <div id="cvStatsExtended"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Format-Native Validation -->
+                    <div class="cross-section expanded">
+                        <div class="cross-section-header" onclick="this.parentElement.classList.toggle('expanded')">
+                            <span>Format-Native Validation <span class="cs-count" id="cvNativeCount">0</span></span>
+                            <span class="toggle-arrow">&#9660;</span>
+                        </div>
+                        <div class="cross-section-body" id="cvNativeBody"></div>
+                    </div>
+
+                    <!-- BOM Schema Validation -->
+                    <div class="cross-section expanded">
+                        <div class="cross-section-header" onclick="this.parentElement.classList.toggle('expanded')">
+                            <span>Schema Validation (BOM) <span class="cs-count" id="cvBomCount">0</span></span>
+                            <span class="toggle-arrow">&#9660;</span>
+                        </div>
+                        <div class="cross-section-body" id="cvBomBody"></div>
+                    </div>
+ 
+                    <!-- Cross-Document Rules -->
+                    <div class="cross-section expanded">
+                        <div class="cross-section-header" onclick="this.parentElement.classList.toggle('expanded')">
+                            <span>Cross-Document Validation <span class="cs-count" id="cvCrossCount">0</span></span>
+                            <span class="toggle-arrow">&#9660;</span>
+                        </div>
+                        <div class="cross-section-body" id="cvCrossBody"></div>
+                    </div>
+                    
+                    <!-- Traceability Map -->
+                    <div class="cross-section">
+                        <div class="cross-section-header" onclick="this.parentElement.classList.toggle('expanded')">
+                            <span>Traceability Map <span class="cs-count" id="cvTraceCount">0</span></span>
+                            <span class="toggle-arrow">&#9660;</span>
+                        </div>
+                        <div class="cross-section-body" id="cvTraceBody"></div>
+                    </div>
+                </div>
+ 
+            </div><!-- /crossValidation -->
         </div>
 
         <!-- ============ CONVERTER TAB ============ -->
@@ -337,7 +345,7 @@
             <!-- Target Format -->
             <div class="card">
                 <div class="card-title">Target Format</div>
-                <div class="format-grid" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="format-grid format-grid-4">
                     <div class="format-card" data-target="openvex" id="tgtOpenvex">
                         <div class="mapping-tooltip" id="tooltipOpenvex"></div>
                         <div class="format-icon">VEX</div>
@@ -727,6 +735,7 @@
             if (data.document && data.document.tracking) return 'csaf';
             if (data.bomFormat === 'CycloneDX') return 'cyclonedx';
             if (data.specVersion && data.components) return 'cyclonedx';
+            if (data.spdxVersion) return 'spdx';
             return 'unknown';
         }
 
@@ -757,36 +766,34 @@
                 if (specVersion.startsWith('1.4')) return '1.4';
                 return 'x';
             }
+            if (format === 'spdx') {
+                const sv = data.spdxVersion || '';
+                if (sv.includes('3.0.1')) return '3.0.1';
+                if (sv.includes('2.3')) return '2.3';
+                return sv || 'x';
+            }
             return 'x';
         }
 
         function updateFormatVersion(containerId, format, version) {
-            const formatMap = {
-                'openvex': 'Openvex',
-                'csaf': 'Csaf',
-                'cyclonedx': 'Cyclonedx'
-            };
-            const cardId = containerId + formatMap[format];
-            const card = document.getElementById(cardId);
+            const map = { 
+                openvex: 'Openvex', 
+                csaf: 'Csaf', 
+                cyclonedx: 'Cyclonedx', 
+                spdx: 'Spdx' };
+            const card = document.getElementById(containerId + map[format]);
             if (card) {
-                const versionSpan = card.querySelector('.format-version');
-                if (versionSpan) {
-                    versionSpan.textContent = version;
+                const vs = card.querySelector('.format-version'); 
+                if (vs) {
+                    vs.textContent = version; 
                 }
             }
         }
-
-        function resetFormatVersions(containerPrefix) {
-            const defaults = {
-                'openvex': 'x',
-                'csaf': 'x',
-                'cyclonedx': 'x'
-            };
-            Object.keys(defaults).forEach(format => {
-                updateFormatVersion(containerPrefix, format, defaults[format]);
-            });
+ 
+        function resetFormatVersions(prefix) {
+            ['openvex','csaf','cyclonedx','spdx'].forEach(f => updateFormatVersion(prefix, f, 'x'));
         }
-
+ 
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
@@ -1469,6 +1476,358 @@
                 alert('Download error: ' + e.message);
             }
         });
+    
+        // ============ Validator Sub-tab ============
+        document.querySelectorAll('.subtab-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.subtab-btn').forEach(function(b) { b.classList.remove('active'); });
+                document.querySelectorAll('.subtab-content').forEach(function(c) { c.classList.remove('active'); });
+                btn.classList.add('active');
+                var target = document.getElementById(btn.getAttribute('data-subtab'));
+                if (target) target.classList.add('active');
+            });
+        });
+
+        // ============ Cross-Validation ============
+        var cvVexData = null, cvVexType = null, cvBomData = null, cvBomType = null;
+
+        function initUploadArea(areaId, inputId, infoId, clearId, handler, clearer) {
+            var area = document.getElementById(areaId);
+            var input = document.getElementById(inputId);
+            var clearBtn = document.getElementById(clearId);
+            if (!area || !input) return;
+            area.addEventListener('click', function() { input.click(); });
+            area.addEventListener('dragover', function(e) { e.preventDefault(); area.classList.add('drag-over'); });
+            area.addEventListener('dragleave', function() { area.classList.remove('drag-over'); });
+            area.addEventListener('drop', function(e) {
+                e.preventDefault(); area.classList.remove('drag-over');
+                if (e.dataTransfer.files.length > 0) handler(e.dataTransfer.files[0]);
+            });
+            input.addEventListener('change', function(e) { if (e.target.files.length > 0) handler(e.target.files[0]); });
+            if (clearBtn) clearBtn.addEventListener('click', clearer);
+        }
+
+        function handleCrossVexFile(file) {
+            if (!file.name.endsWith('.json')) { alert('Please upload a JSON file'); return; }
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                try {
+                    cvVexData = JSON.parse(ev.target.result);
+                    cvVexType = detectFormat(cvVexData);
+                    document.getElementById('crossVexFileName').textContent = file.name;
+                    document.getElementById('crossVexFileSize').textContent = formatFileSize(file.size);
+                    document.getElementById('crossVexFileInfo').classList.add('show');
+                    // 형식 표시
+                    ['crossDetVex','crossDetCsaf','crossDetCdx'].forEach(function(id) {
+                        document.getElementById(id).classList.remove('detected');
+                        document.getElementById(id).querySelector('.chip-ver').textContent = '';
+                    });
+                    var chipMap = {openvex:'crossDetVex', csaf:'crossDetCsaf', cyclonedx:'crossDetCdx'};
+                    if (chipMap[cvVexType]) {
+                        document.getElementById(chipMap[cvVexType]).classList.add('detected');
+                        document.getElementById(chipMap[cvVexType]).querySelector('.chip-ver').textContent = detectVersion(cvVexData, cvVexType);
+                    }
+                    updateCrossBtn();
+                } catch(err) { alert('Invalid JSON: ' + err.message); }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetCrossVex() {
+            cvVexData = null; cvVexType = null;
+            document.getElementById('crossVexFileInput').value = '';
+            document.getElementById('crossVexFileInfo').classList.remove('show');
+            ['crossDetVex','crossDetCsaf','crossDetCdx'].forEach(function(id) {
+                document.getElementById(id).classList.remove('detected');
+                document.getElementById(id).querySelector('.chip-ver').textContent = '';
+            });
+            updateCrossBtn();
+            document.getElementById('crossResults').classList.remove('show');
+        }
+
+        function handleCrossBomFile(file) {
+            if (!file.name.endsWith('.json')) { alert('Please upload a JSON file'); return; }
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                try {
+                    cvBomData = JSON.parse(ev.target.result);
+                    document.getElementById('crossBomFileName').textContent = file.name;
+                    document.getElementById('crossBomFileSize').textContent = formatFileSize(file.size);
+                    document.getElementById('crossBomFileInfo').classList.add('show');
+                    document.getElementById('crossDetCdxBom').classList.remove('detected');
+                    document.getElementById('crossDetSpdx').classList.remove('detected');
+                    document.getElementById('crossDetCdxBom').querySelector('.chip-ver').textContent = '';
+                    document.getElementById('crossDetSpdx').querySelector('.chip-ver').textContent = '';
+                    if (cvBomData.bomFormat === 'CycloneDX') {
+                        cvBomType = 'cyclonedx';
+                        document.getElementById('crossDetCdxBom').classList.add('detected');
+                        document.getElementById('crossDetCdxBom').querySelector('.chip-ver').textContent = cvBomData.specVersion || '';
+                    } else if (cvBomData.spdxVersion) {
+                        cvBomType = 'spdx';
+                        document.getElementById('crossDetSpdx').classList.add('detected');
+                        document.getElementById('crossDetSpdx').querySelector('.chip-ver').textContent = cvBomData.spdxVersion || '';
+                    }
+                    updateCrossBtn();
+                } catch(err) { alert('Invalid JSON: ' + err.message); }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetCrossBom() {
+            cvBomData = null; cvBomType = null;
+            document.getElementById('crossBomFileInput').value = '';
+            document.getElementById('crossBomFileInfo').classList.remove('show');
+            ['crossDetCdxBom','crossDetSpdx'].forEach(function(id) {
+                document.getElementById(id).classList.remove('detected');
+                document.getElementById(id).querySelector('.chip-ver').textContent = '';
+            });
+            updateCrossBtn();
+            document.getElementById('crossResults').classList.remove('show');
+        }
+
+        function updateCrossBtn() {
+            var btn = document.getElementById('crossValidateBtn');
+            if (btn) btn.disabled = !(cvVexData && cvBomData);
+        }
+
+        initUploadArea('crossVexUploadArea','crossVexFileInput','crossVexFileInfo','crossVexClearBtn', handleCrossVexFile, resetCrossVex);
+        initUploadArea('crossBomUploadArea','crossBomFileInput','crossBomFileInfo','crossBomClearBtn', handleCrossBomFile, resetCrossBom);
+
+        // Cross Validate 실행
+        var crossValidateBtn = document.getElementById('crossValidateBtn');
+        if (crossValidateBtn) {
+            crossValidateBtn.addEventListener('click', async function() {
+                if (!cvVexData || !cvBomData) return;
+                var loading = document.getElementById('crossLoading');
+                var results = document.getElementById('crossResults');
+                loading.classList.add('show');
+                results.classList.remove('show');
+                try {
+                    var resp = await fetch('/api/validate-with-bom', {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({content: cvVexData, bom: cvBomData})
+                    });
+                    var data = await resp.json();
+                    loading.classList.remove('show');
+                    if (!data.success && !data.cross_validation) {
+                        alert('Validation failed: ' + (data.error || 'Unknown error'));
+                        return;
+                    }
+                    renderCV(data);
+                    results.classList.add('show');
+                } catch(err) {
+                    loading.classList.remove('show');
+                    alert('Network error: ' + err.message);
+                }
+            });
+        }
+
+        function renderCV(result) {
+            var cross = result.cross_validation || {}; var fin = result.final_verdict || {};
+            var v = (fin.verdict || 'valid').toLowerCase();
+            var badge = document.getElementById('cvBadge'); badge.className = 'final-verdict-badge ' + v;
+            var labels = {valid:'VALID', warning:'WARNING', invalid:'INVALID', unverifiable:'UNVERIFIABLE'};
+            badge.textContent = labels[v] || v.toUpperCase();
+            var rl = document.getElementById('cvReasons'); rl.innerHTML = '';
+            (fin.reasons||[]).forEach(function(r){ var li=document.createElement('li'); li.textContent=r; rl.appendChild(li); });
+            if (fin.vex_verdict || fin.cross_verdict) { var li=document.createElement('li'); li.textContent='Native: '+(fin.vex_verdict||'valid')+' / Cross-doc: '+(fin.cross_verdict||'valid'); rl.appendChild(li); }
+            var st = cross.match_stats || {}; var g = document.getElementById('cvStatsGrid'); g.innerHTML = '';
+            [{l:'Statements',v:st.total||0,r:''},{l:'Products',v:st.unique_products||0,r:''},{l:'Strong Match',v:st.strong_matched||0,r:(st.strong_match_rate||0)+'%'},{l:'Weak Match',v:st.weak_matched||0,r:(st.weak_match_rate||0)+'%'},{l:'Ambiguous',v:st.ambiguous||0,r:(st.ambiguous_rate||0)+'%'},{l:'Unresolved',v:st.unresolved||0,r:(st.unresolved_rate||0)+'%'}].forEach(function(s){ var d=document.createElement('div'); d.className='stat-card'; d.innerHTML='<div class="sv">'+s.v+'</div><div class="sl">'+s.l+'</div>'+(s.r?'<div class="sr">'+s.r+'</div>':''); g.appendChild(d); });
+            // 확장 통계 렌더링
+            var ext = document.getElementById('cvStatsExtended'); var eh = '';
+            // Matching Basis Breakdown
+            var bb = st.basis_breakdown || {};
+            if (Object.keys(bb).length > 0) {
+                eh += '<div class="cv-ext-section"><div class="cv-ext-title">Matching Basis Breakdown</div><div class="cv-ext-rows">';
+                for (var bk in bb) eh += '<div class="cv-ext-row"><span class="cv-ext-label">'+escapeHtml(bk)+'</span><span class="cv-ext-value">'+bb[bk]+'</span></div>';
+                eh += '</div></div>';
+            }
+            // Product-level Stats
+            var pl = st.product_level || {};
+            if (pl.total) {
+                eh += '<div class="cv-ext-section"><div class="cv-ext-title">Product-level Stats</div><div class="cv-ext-rows">';
+                eh += '<div class="cv-ext-row"><span class="cv-ext-label">Unique Products</span><span class="cv-ext-value">'+pl.total+'</span></div>';
+                if (pl.strong) eh += '<div class="cv-ext-row"><span class="cv-ext-label">Strong Matched</span><span class="cv-ext-value">'+pl.strong+'</span></div>';
+                if (pl.weak) eh += '<div class="cv-ext-row"><span class="cv-ext-label">Weak Matched</span><span class="cv-ext-value">'+pl.weak+'</span></div>';
+                if (pl.ambiguous) eh += '<div class="cv-ext-row"><span class="cv-ext-label">Ambiguous</span><span class="cv-ext-value">'+pl.ambiguous+'</span></div>';
+                if (pl.unresolved) eh += '<div class="cv-ext-row"><span class="cv-ext-label">Unresolved</span><span class="cv-ext-value">'+pl.unresolved+'</span></div>';
+                eh += '</div></div>';
+            }
+            // Identifier Inconsistency
+            var ic = st.id_inconsistency || {};
+            if (ic.purl_mismatch || ic.purl_missing || ic.cpe_mismatch) {
+                eh += '<div class="cv-ext-section"><div class="cv-ext-title">Identifier Inconsistency</div><div class="cv-ext-rows">';
+                if (ic.purl_mismatch) eh += '<div class="cv-ext-row"><span class="cv-ext-label">PURL Mismatch</span><span class="cv-ext-value cv-ext-error">'+ic.purl_mismatch+'</span></div>';
+                if (ic.purl_missing) eh += '<div class="cv-ext-row"><span class="cv-ext-label">PURL Missing in VEX</span><span class="cv-ext-value cv-ext-warn">'+ic.purl_missing+'</span></div>';
+                if (ic.cpe_mismatch) eh += '<div class="cv-ext-row"><span class="cv-ext-label">CPE Mismatch</span><span class="cv-ext-value cv-ext-error">'+ic.cpe_mismatch+'</span></div>';
+                eh += '</div></div>';
+            }
+            // Rule Violation Breakdown (사람 친화적 라벨)
+            var rb = st.rule_breakdown || {};
+            var ruleFriendly = {
+                'CROSS-001 error': 'Unresolved Targets',
+                'CROSS-001 warning': 'Weakly Resolved Targets',
+                'CROSS-002 error': 'Ambiguous Targets (Strong)',
+                'CROSS-002 warning': 'Ambiguous Targets (Weak)',
+                'CROSS-003 error': 'Identifier Mismatch',
+                'CROSS-003 warning': 'Identifier Loss',
+                'CROSS-004 info': 'Scope Overreach',
+                'CROSS-005 error': 'component_not_present Contradiction',
+                'CROSS-005 warning': 'component_not_present Weak Contradiction',
+                'CROSS-005 info': 'component_not_present Unverifiable'
+            };
+            if (Object.keys(rb).length > 0) {
+                eh += '<div class="cv-ext-section"><div class="cv-ext-title">Rule Violation Breakdown</div><div class="cv-ext-rows">';
+                for (var rk in rb) {
+                    var isErr = rk.indexOf('error') >= 0;
+                    var friendly = ruleFriendly[rk] || rk;
+                    eh += '<div class="cv-ext-row"><span class="cv-ext-label">'
+                        + '<span class="cv-ext-rule-id">'+escapeHtml(rk)+'</span>'
+                        + '<span class="cv-ext-rule-friendly">'+escapeHtml(friendly)+'</span>'
+                        + '</span><span class="cv-ext-value'+(isErr?' cv-ext-error':' cv-ext-warn')+'">'+rb[rk]+'</span></div>';
+                }
+                eh += '</div></div>';
+            }
+            ext.innerHTML = eh;
+            var ne = result.errors || []; var nc = document.getElementById('cvNativeCount'); nc.textContent = ne.length; nc.className = 'cs-count' + (ne.length===0?' clean':'');
+            document.getElementById('cvNativeBody').innerHTML = ne.length===0 ? '<div class="alert alert-success">No format-native issues found.</div>' : renderILPaged(ne, true, 'cvNativePage');
+            
+            // BOM Schema Validation
+            var bv = result.bom_validation || {};
+            var be = bv.errors || []; var bc = document.getElementById('cvBomCount'); bc.textContent = be.length; bc.className = 'cs-count' + (be.length===0?' clean':'');
+            var bomHeader = '';
+            if (bv.bomFormat) bomHeader += '<div class="alert alert-info" style="margin-bottom:12px;">BOM Format: <strong>'+escapeHtml(bv.bomFormat)+'</strong>' + (bv.bomVersion ? ' '+escapeHtml(bv.bomVersion) : '') + (bv.schemaValidated === false ? ' (schema validation skipped)' : '') + '</div>';
+            document.getElementById('cvBomBody').innerHTML = bomHeader + (be.length===0 ? '<div class="alert alert-success">No BOM schema issues found.</div>' : renderILPaged(be, true, 'cvBomPage'));
+
+            var cr = cross.rule_results || []; var cc = document.getElementById('cvCrossCount'); cc.textContent = cr.length; cc.className = 'cs-count' + (cr.length===0?' clean':'');
+            document.getElementById('cvCrossBody').innerHTML = cr.length===0 ? '<div class="alert alert-success">No cross-document issues found.</div>' : renderILPaged(cr, false, 'cvCrossPage');
+            var tm = cross.traceability_map || []; document.getElementById('cvTraceCount').textContent = tm.length; document.getElementById('cvTraceBody').innerHTML = renderTMPaged(tm, 'cvTracePage');
+        }
+ 
+        // ============ 페이지네이션 상태 ============
+        var _pageState = {};
+        var PAGE_SIZE = 10;
+ 
+        function _getPage(key) { return _pageState[key] || 1; }
+        function _setPage(key, p) { _pageState[key] = p; }
+ 
+        function _renderPager(total, currentPage, key, rerenderFn) {
+            var totalPages = Math.ceil(total / PAGE_SIZE);
+            if (totalPages <= 1) return '';
+            var h = '<div class="cv-pager">';
+            // 이전 버튼
+            h += '<button class="cv-pager-btn' + (currentPage <= 1 ? ' disabled' : '') + '" onclick="'+rerenderFn+'(\'' + key + '\',' + (currentPage-1) + ')">&laquo;</button>';
+            // 표시할 페이지 번호 계산 (최대 10개)
+            var maxVisible = 10;
+            var startPage, endPage;
+            if (totalPages <= maxVisible) {
+                startPage = 1;
+                endPage = totalPages;
+            } else {
+                // 현재 페이지를 중심으로 앞뒤 배분
+                var half = Math.floor(maxVisible / 2);
+                startPage = currentPage - half;
+                endPage = currentPage + (maxVisible - half - 1);
+                // 범위 보정
+                if (startPage < 1) { endPage += (1 - startPage); startPage = 1; }
+                if (endPage > totalPages) { startPage -= (endPage - totalPages); endPage = totalPages; }
+                if (startPage < 1) startPage = 1;
+            }
+            // 1번 페이지 + 말줄임
+            if (startPage > 1) {
+                h += '<button class="cv-pager-btn' + (1 === currentPage ? ' active' : '') + '" onclick="'+rerenderFn+'(\'' + key + '\',1)">1</button>';
+                if (startPage > 2) h += '<span class="cv-pager-dots">...</span>';
+            }
+            // 가운데 페이지들
+            for (var i = startPage; i <= endPage; i++) {
+                if (i === 1 && startPage > 1) continue; // 이미 표시
+                if (i === totalPages && endPage < totalPages) continue; // 아래서 표시
+                h += '<button class="cv-pager-btn' + (i === currentPage ? ' active' : '') + '" onclick="'+rerenderFn+'(\'' + key + '\',' + i + ')">' + i + '</button>';
+            }
+            // 마지막 페이지 + 말줄임
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) h += '<span class="cv-pager-dots">...</span>';
+                h += '<button class="cv-pager-btn' + (totalPages === currentPage ? ' active' : '') + '" onclick="'+rerenderFn+'(\'' + key + '\',' + totalPages + ')">' + totalPages + '</button>';
+            }
+            // 다음 버튼
+            h += '<button class="cv-pager-btn' + (currentPage >= totalPages ? ' disabled' : '') + '" onclick="'+rerenderFn+'(\'' + key + '\',' + (currentPage+1) + ')">&raquo;</button>';
+            h += '<span class="cv-pager-info">' + currentPage + ' / ' + totalPages + '</span>';
+            h += '</div>';
+            return h;
+        }
+ 
+        // ============ Issue List (paginated) ============
+        var _ilData = {};
+ 
+        function renderILPaged(items, isNative, key) {
+            _ilData[key] = { items: items, isNative: isNative };
+            _setPage(key, 1);
+            return _renderILPage(key, 1);
+        }
+ 
+        function goILPage(key, page) {
+            var d = _ilData[key]; if (!d) return;
+            var totalPages = Math.ceil(d.items.length / PAGE_SIZE);
+            if (page < 1 || page > totalPages) return;
+            _setPage(key, page);
+            var containerMap = {'cvNativePage':'cvNativeBody', 'cvBomPage':'cvBomBody', 'cvCrossPage':'cvCrossBody'};
+            var container = document.getElementById(containerMap[key] || 'cvCrossBody');
+            if (container) container.innerHTML = _renderILPage(key, page);
+        }
+ 
+        function _renderILPage(key, page) {
+            var d = _ilData[key]; if (!d) return '';
+            var items = d.items, isNative = d.isNative;
+            var start = (page - 1) * PAGE_SIZE;
+            var slice = items.slice(start, start + PAGE_SIZE);
+            var h = '';
+            slice.forEach(function(it) {
+                var s = it.severity||'info';
+                var icon = '';
+                if (!isNative) icon = it.passed ? '<span style="color:#4caf50;font-weight:bold;margin-right:6px;">&#10004;</span>' : '<span style="color:#c62828;font-weight:bold;margin-right:6px;">&#10008;</span>';
+                h += '<div class="cv-issue-item sev-'+s+'">' + icon + '<span class="cv-issue-rule">' + escapeHtml(it.rule_id||'') + '</span>';
+                if (it.rule_name) h += '<span class="cv-issue-name">' + escapeHtml(it.rule_name) + '</span>';
+                h += '<span class="cv-issue-sev '+s+'">' + s.toUpperCase() + '</span><div class="cv-issue-msg">' + escapeHtml(it.message||'') + '</div>';
+                if (isNative && it.path) h += '<div class="cv-issue-path">Path: ' + escapeHtml(it.path) + '</div>';
+                h += '</div>';
+            });
+            h += _renderPager(items.length, page, key, 'goILPage');
+            return h;
+        }
+ 
+        // ============ Traceability Map (paginated, 1-based index) ============
+        var _tmData = null;
+ 
+        function renderTMPaged(tm, key) {
+            _tmData = tm;
+            _setPage(key, 1);
+            return _renderTMPage(key, 1);
+        }
+ 
+        function goTMPage(key, page) {
+            if (!_tmData) return;
+            var totalPages = Math.ceil(_tmData.length / PAGE_SIZE);
+            if (page < 1 || page > totalPages) return;
+            _setPage(key, page);
+            var container = document.getElementById('cvTraceBody');
+            if (container) container.innerHTML = _renderTMPage(key, page);
+        }
+ 
+        function _renderTMPage(key, page) {
+            var tm = _tmData;
+            if (!tm || tm.length===0) return '<div style="color:#8b7355;padding:8px;">No product references to trace.</div>';
+            var start = (page - 1) * PAGE_SIZE;
+            var slice = tm.slice(start, start + PAGE_SIZE);
+            var h = '<div style="overflow-x:auto;"><table class="trace-table"><thead><tr><th>#</th><th>Vulnerability</th><th>VEX Product</th><th>BOM Component</th><th>Strength</th><th>Status</th><th>Basis</th></tr></thead><tbody>';
+            slice.forEach(function(m, i){
+                var rowNum = start + i + 1;
+                h += '<tr><td>'+rowNum+'</td><td style="font-family:monospace;font-size:12px;">'+escapeHtml(m.vuln_id||'-')+'</td><td style="font-family:monospace;font-size:12px;max-width:180px;">'+escapeHtml(m.vex_product_id||'-')+'</td><td style="font-family:monospace;font-size:12px;max-width:180px;">'+escapeHtml(m.bom_component_id||'-')+'</td><td><span class="mbadge '+(m.strength||'none')+'">'+(m.strength||'none')+'</span></td><td><span class="mbadge '+(m.status||'unresolved')+'">'+(m.status||'unresolved')+'</span></td><td style="font-size:12px;">'+escapeHtml(m.matching_basis||'-')+'</td></tr>';
+            });
+            h += '</tbody></table></div>';
+            h += _renderPager(tm.length, page, key, 'goTMPage');
+            return h;
+        }
     </script>
 </body>
 </html>

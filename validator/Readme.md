@@ -1,92 +1,70 @@
-# VEX Validator v2.0
+# VEX Validator
+A unified validator for OpenVEX, CSAF, and CycloneDX VEX documents.
 
-[![Version](https://img.shields.io/badge/version-2.0-blue.svg)](https://github.com)
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
-
-OpenVEX, CSAF, CycloneDX VEX 문서를 검증하는 통합 Validator입니다.
-
-## Table of Contents
-
-- [Features](#features)
-- [Supported Formats](#supported-formats)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Validation Rules](#validation-rules)
-- [Web Interface](#web-interface)
+## Overview
+VEX Validator performs schema validation and semantic rule validation for multiple VEX formats. It detects the document format automatically and reports validation results with rule IDs, severity, and document paths.
 
 ## Features
-
-- JSON Schema 검증
-- 시맨틱 규칙 검증(MUST/SHOULD 분리)
-- 포맷 자동 감지(OpenVEX/CSAF/CycloneDX)
-- 상세 오류 리포트(rule_id, path, severity)
-- 웹 UI 제공
+- Schema validation
+- Semantic rule validation
+- Automatic format detection
+- Structured error reporting (`rule_id`, `path`, `severity`)
+- Optional web interface
 
 ## Supported Formats
-
-| Format | Version | Support |
-|---|---|---|
+| Format | Versions | Support |
+| --- | --- | --- |
 | OpenVEX | 0.2.0 | Full |
-| CSAF | 2.0 / 2.1 | Full |
-| CycloneDX | 1.5 / 1.6 / 1.7 | 1.6+ Full, 1.5 Schema-only |
+| CSAF | 2.0, 2.1 | Full |
+| CycloneDX VEX | 1.5, 1.6, 1.7 | 1.6+ full, 1.5 schema-only |
 
-참고:
-- CycloneDX 1.5는 공식 근거 제약으로 스키마 검증만 지원합니다.
-- CycloneDX 시맨틱 검증은 1.6 이상 문서에 대해 적용됩니다.
+Notes:
+- CycloneDX 1.5 is validated against schema only.
+- Semantic validation for CycloneDX VEX is applied to version 1.6 and later.
 
 ## Installation
-
-### Prerequisites
-
+Requirements:
 - Python 3.8+
-- pip
+- `pip`
 
-### Install
-```bash
+Install dependencies:
+```
 pip install -r requirements.txt
 ```
 
-필수 패키지:
-jsonschema>=4.0.0
-Flask>=2.0.0 (웹 UI 사용 시)
+Core dependencies:
+jsonschema
+Flask (only required for the web UI)
 
 ## Usage
-
-Web UI
-```bash
+Run the web UI:
+```
 python app.py
 ```
 
-기본 흐름:
-- JSON 파일 업로드
-- 포맷 자동 감지
-- 검증 실행
-- 오류/경고 확인
+Typical workflow:
+1. Upload a JSON document
+2. Detect the VEX format automatically
+3. Run validation
+4. Review errors and warnings
 
-결과 해석
-- error: MUST 위반(문서 invalid)
-- warning: SHOULD/RECOMMENDED 위반(문서는 valid 가능)
+Result levels:
+error: violation of required rules
+warning: violation of recommended rules
 
-## Validation Rules
-**OpenVEX 0.2.0**
-- 문서 수준: @id, version, author, timestamp 관련 규칙
-- Statement 수준: status 조건부 필드, vulnerability, products addressable 규칙
-- 교차 규칙: 동일 대상/취약점/시점 충돌 검출
+## Validation Scope
+### OpenVEX
+- Document-level field validation
+- Statement-level semantic checks
+- Cross-statement conflict detection
 
-**CSAF 2.0/2.1**
-- Mandatory tests 및 profile tests 기반 규칙
-- product_tree 참조 무결성
-- vulnerability/product_status 정합성
-- 일정/타임라인 검증
+### CycloneDX VEX
+- Schema validation for all supported versions
+- Semantic VEX validation for 1.6+
+- Additional constraints for newer versions where applicable
 
-**CycloneDX 1.5/1.6/1.7**
-- 1.5: Schema validation only
-- 1.6+: VEX 시맨틱 규칙 적용
-- 1.7: 강화 규칙(예: not_affected 관련 조건, modelCard 제약 등)
-
-## Web Interface
-제공 기능:
-- Drag & Drop 업로드
-- 포맷 자동 감지
-- 규칙 목록 조회
-- severity별 결과 표시
+### CSAF
+- Mandatory and profile-based checks
+- product_tree reference integrity
+- Vulnerability and product status consistency
+- Timeline and date validation
